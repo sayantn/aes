@@ -114,14 +114,14 @@ impl AesBlockX2 {
         self.0.is_zero() & self.1.is_zero()
     }
 
-    /// Shifts the AES blocks by [N] bytes to the right. [N] must be non-negative
+    /// Shifts the AES blocks by `N` bytes to the right. `N` must be non-negative
     #[inline]
     pub fn shr<const N: i32>(self) -> Self {
         assert!(N >= 0);
         Self(self.0.shr::<N>(), self.1.shr::<N>())
     }
 
-    /// Shifts the AES blocks by [N] bytes to the left. [N] must be non-negative
+    /// Shifts the AES blocks by `N` bytes to the left. `N` must be non-negative
     #[inline]
     pub fn shl<const N: i32>(self) -> Self {
         assert!(N >= 0);

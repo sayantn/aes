@@ -99,7 +99,7 @@ impl AesBlock {
         unsafe { _mm_testz_si128(self.0, self.0) == 1 }
     }
 
-    /// Shifts the AES block by [N] bytes to the right. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
     ///
     /// ```
     /// # use aes::AesBlock;
@@ -119,7 +119,7 @@ impl AesBlock {
         Self(unsafe { _mm_bslli_si128::<N>(self.0) })
     }
 
-    /// Shifts the AES block by [N] bytes to the left. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
     ///
     /// ```
     /// # use aes::AesBlock;

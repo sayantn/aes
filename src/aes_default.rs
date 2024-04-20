@@ -131,7 +131,7 @@ impl AesBlock {
         (self.0 | self.1 | self.2 | self.3) == 0
     }
 
-    /// Shifts the AES block by [N] bytes to the right. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
     ///
     /// ```
     /// # use aes::AesBlock;
@@ -177,7 +177,7 @@ impl AesBlock {
         }
     }
 
-    /// Shifts the AES block by [N] bytes to the left. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
     ///
     /// ```
     /// # use aes::AesBlock;

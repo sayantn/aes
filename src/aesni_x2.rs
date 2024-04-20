@@ -28,8 +28,8 @@ impl From<[u8; 32]> for AesBlockX2 {
 
 impl From<(AesBlock, AesBlock)> for AesBlockX2 {
     #[inline]
-    fn from((lo, hi): (AesBlock, AesBlock)) -> Self {
-        Self(unsafe { _mm256_setr_m128i(lo.0, hi.0) })
+    fn from(value: (AesBlock, AesBlock)) -> Self {
+        Self(unsafe { _mm256_setr_m128i(value.0 .0, value.1 .0) })
     }
 }
 
@@ -126,7 +126,7 @@ impl AesBlockX2 {
         unsafe { _mm256_testz_si256(self.0, self.0) == 1 }
     }
 
-    /// Shifts the AES block by [N] bytes to the right. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
     #[inline]
     pub fn shr<const N: i32>(self) -> Self {
         assert!(N >= 0);
@@ -134,7 +134,7 @@ impl AesBlockX2 {
         Self(unsafe { _mm256_bslli_epi128::<N>(self.0) })
     }
 
-    /// Shifts the AES block by [N] bytes to the left. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
     #[inline]
     pub fn shl<const N: i32>(self) -> Self {
         assert!(N >= 0);

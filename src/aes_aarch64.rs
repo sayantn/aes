@@ -104,7 +104,7 @@ impl AesBlock {
         }
     }
 
-    /// Shifts the AES block by [N] bytes to the right. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
     ///
     ///
     /// ```
@@ -130,7 +130,7 @@ impl AesBlock {
         }
     }
 
-    /// Shifts the AES block by [N] bytes to the left. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
     ///
     /// ```
     /// # use aes::AesBlock;

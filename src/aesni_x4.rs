@@ -214,7 +214,7 @@ impl AesBlockX4 {
         }
     }
 
-    /// Shifts the AES block by [N] bytes to the left. [N] must be non-negative
+    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
     #[inline]
     pub fn shl<const N: i32>(self) -> Self {
         assert!(N >= 0);

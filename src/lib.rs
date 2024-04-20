@@ -1,44 +1,44 @@
 //! This crate provides a platform-agnostic api for the [AES function](https://doi.org/10.6028/NIST.FIPS.197-upd1)
 //!
-//! All you have to do is compile it with correct "target_cpu" attributes, and this crate would
+//! All you have to do is compile it with correct `target_cpu` attributes, and this crate would
 //! guarantee that you are getting the best possible performance, while hiding from you the ugly
 //! details. For typical Rust applications, if you are not cross-compiling, you can just use
-//! "target-cpu=native" in the RUSTFLAGS environment variable.
+//! `target-cpu=native` in the `RUSTFLAGS` environment variable.
 //!
 //! # Implementations (as of date) and requirements
 //!
-//!  -  AES-NI (with Vector AES for 2- and 4-blocks) => requires a Nightly compiler (for avx512), 
-//!     enabling the [`vaes`] feature, and compiling for x86(64) with avx512vl and vaes target_features enabled.
+//!  -  `AES-NI (with Vector AES for 2- and 4-blocks)` => requires a Nightly compiler (for avx512),
+//!     enabling the `vaes` feature, and compiling for x86(64) with `avx512vl` and `vaes` target_features enabled.
 //!
-//!  -  AES-NI (with Vector AES for 4-blocks) => requires a Nightly compiler (for avx512), 
-//!     enabling the [`vaes`] feature, and compiling for x86(64) with avx512f and vaes target_features enabled.
+//!  -  `AES-NI (with Vector AES for 4-blocks)` => requires a Nightly compiler (for avx512),
+//!     enabling the `vaes` feature, and compiling for x86(64) with `avx512f` and `vaes` target_features enabled.
 //!
-//!  -  AES-NI => requires compiling for x86(64) with sse4.1 and aes target_features enabled.
+//!  -  `AES-NI` => requires compiling for x86(64) with `sse4.1` and `aes` target_features enabled.
 //!
-//!  -  AES-AArch64 => requires compiling for AArch64 with aes target_feature enabled.
+//!  -  `AES-AArch64` => requires compiling for AArch64 with `aes` target_feature enabled.
 //!
-//!  -  Software Implementation (Fallback, using the reference implementation of AES as provided by
+//!  -  `Software Implementation` (Fallback, using the reference implementation of AES as provided by
 //!     Rijmen and Daemen, available on [their website](https://web.archive.org/web/20050828204927/http://www.iaik.tu-graz.ac.at/research/krypto/AES/old/%7Erijmen/rijndael/) )
 //!
 //! It is important to remember that the target_cpu attribute sets all the available target_feature
 //! attributes, so you are guaranteed to get the best performance available in your target cpu.
 //!
-//! No matter which implementation is selected, all the functions are guaranteed to have exactly the same signature, with 
+//! No matter which implementation is selected, all the functions are guaranteed to have exactly the same signature, with
 //! the exact same behaviour
 //!
 //! This crate also implements 2- and 4- block versions of normal AES functions, using [`AesBlockX2`]
 //! and [`AesBlockX4`]. These behave exactly as if you were doing the same operation on 2 (or 4)
-//! [`AesBlock`]s. These are provided to use hardware acceleration using Intel/AMD's VAES instruction
-//! set or, in the future, ARM's SVE2-AES instructions.
+//! [`AesBlock`]s. These are provided to use hardware acceleration using x86(64)'s `VAES` instruction
+//! set or, in the future, ARM's `SVE2-AES` instructions.
 
 #![cfg_attr(
-all(
-feature = "vaes",
-any(target_arch = "x86", target_arch = "x86_64"),
-any(target_feature = "avx512f", target_feature = "avx512vl"),
-target_feature = "vaes"
-),
-feature(stdarch_x86_avx512)
+    all(
+        feature = "vaes",
+        any(target_arch = "x86", target_arch = "x86_64"),
+        any(target_feature = "avx512f", target_feature = "avx512vl"),
+        target_feature = "vaes"
+    ),
+    feature(stdarch_x86_avx512)
 )]
 
 use cfg_if::cfg_if;
@@ -96,6 +96,11 @@ cfg_if! {
         mod aesdefault_x4;
         pub use aesdefault_x4::AesBlockX4;
     }
+}
+
+#[inline(never)]
+pub fn z(value: (AesBlock, AesBlock)) -> AesBlockX2 {
+    AesBlockX2::from(value).enc(value.0.into())
 }
 
 impl Default for AesBlock {
@@ -816,7 +821,10 @@ mod tests {
 
     #[test]
     fn expansion_of_256_bit_key() {
-        let key = <[u8; 32]>::from_hex("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4").unwrap();
+        let key = <[u8; 32]>::from_hex(
+            "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+        )
+        .unwrap();
 
         let expanded = keygen_256(key);
         assert_eq!(expanded[0], 0x603deb1015ca71be2b73aef0857d7781_u128.into());
@@ -841,58 +849,117 @@ mod tests {
             assert_eq!($enc.encrypt_block($vectors[0].0), $vectors[0].1);
             assert_eq!($enc.encrypt_block($vectors[1].0), $vectors[1].1);
 
-            assert_eq!($enc.encrypt_2_blocks(AesBlockX2::from(($vectors[0].0, $vectors[1].0))), AesBlockX2::from(($vectors[0].1, $vectors[1].1)));
-            
+            assert_eq!(
+                $enc.encrypt_2_blocks(AesBlockX2::from(($vectors[0].0, $vectors[1].0))),
+                AesBlockX2::from(($vectors[0].1, $vectors[1].1))
+            );
+
             assert_eq!($enc.encrypt_block($vectors[2].0), $vectors[2].1);
             assert_eq!($enc.encrypt_block($vectors[3].0), $vectors[3].1);
 
-            assert_eq!($enc.encrypt_2_blocks(AesBlockX2::from(($vectors[2].0, $vectors[3].0))), AesBlockX2::from(($vectors[2].1, $vectors[3].1)));
-            
             assert_eq!(
-                $enc.encrypt_4_blocks(AesBlockX4::from(($vectors[0].0,$vectors[1].0,$vectors[2].0,$vectors[3].0))),
-                AesBlockX4::from(($vectors[0].1,$vectors[1].1,$vectors[2].1,$vectors[3].1))
+                $enc.encrypt_2_blocks(AesBlockX2::from(($vectors[2].0, $vectors[3].0))),
+                AesBlockX2::from(($vectors[2].1, $vectors[3].1))
+            );
+
+            assert_eq!(
+                $enc.encrypt_4_blocks(AesBlockX4::from((
+                    $vectors[0].0,
+                    $vectors[1].0,
+                    $vectors[2].0,
+                    $vectors[3].0
+                ))),
+                AesBlockX4::from(($vectors[0].1, $vectors[1].1, $vectors[2].1, $vectors[3].1))
             );
         };
         (dec: $enc:ident, $vectors:ident) => {
             assert_eq!($enc.decrypt_block($vectors[0].1), $vectors[0].0);
             assert_eq!($enc.decrypt_block($vectors[1].1), $vectors[1].0);
 
-            assert_eq!($enc.decrypt_2_blocks(AesBlockX2::from(($vectors[0].1, $vectors[1].1))), AesBlockX2::from(($vectors[0].0, $vectors[1].0)));
-            
+            assert_eq!(
+                $enc.decrypt_2_blocks(AesBlockX2::from(($vectors[0].1, $vectors[1].1))),
+                AesBlockX2::from(($vectors[0].0, $vectors[1].0))
+            );
+
             assert_eq!($enc.decrypt_block($vectors[2].1), $vectors[2].0);
             assert_eq!($enc.decrypt_block($vectors[3].1), $vectors[3].0);
 
-            assert_eq!($enc.decrypt_2_blocks(AesBlockX2::from(($vectors[2].1, $vectors[3].1))), AesBlockX2::from(($vectors[2].0, $vectors[3].0)));
-            
             assert_eq!(
-                $enc.decrypt_4_blocks(AesBlockX4::from(($vectors[0].1,$vectors[1].1,$vectors[2].1,$vectors[3].1))),
-                AesBlockX4::from(($vectors[0].0,$vectors[1].0,$vectors[2].0,$vectors[3].0))
+                $enc.decrypt_2_blocks(AesBlockX2::from(($vectors[2].1, $vectors[3].1))),
+                AesBlockX2::from(($vectors[2].0, $vectors[3].0))
+            );
+
+            assert_eq!(
+                $enc.decrypt_4_blocks(AesBlockX4::from((
+                    $vectors[0].1,
+                    $vectors[1].1,
+                    $vectors[2].1,
+                    $vectors[3].1
+                ))),
+                AesBlockX4::from(($vectors[0].0, $vectors[1].0, $vectors[2].0, $vectors[3].0))
             );
         };
     }
 
     // these are of form (plaintext, ciphertext) pairs
     lazy_static! {
-        static ref AES_128_VECTORS:[(AesBlock, AesBlock); 5] = [
-            (0x6bc1bee22e409f96e93d7e117393172a.into(), 0x3ad77bb40d7a3660a89ecaf32466ef97.into()),
-            (0xae2d8a571e03ac9c9eb76fac45af8e51.into(), 0xf5d3d58503b9699de785895a96fdbaaf.into()),
-            (0x30c81c46a35ce411e5fbc1191a0a52ef.into(), 0x43b1cd7f598ece23881b00e3ed030688.into()),
-            (0xf69f2445df4f9b17ad2b417be66c3710.into(), 0x7b0c785e27e8ad3f8223207104725dd4.into()),
-            (0x3243f6a8885a308d313198a2e0370734.into(), 0x3925841d02dc09fbdc118597196a0b32.into()),
+        static ref AES_128_VECTORS: [(AesBlock, AesBlock); 5] = [
+            (
+                0x6bc1bee22e409f96e93d7e117393172a.into(),
+                0x3ad77bb40d7a3660a89ecaf32466ef97.into()
+            ),
+            (
+                0xae2d8a571e03ac9c9eb76fac45af8e51.into(),
+                0xf5d3d58503b9699de785895a96fdbaaf.into()
+            ),
+            (
+                0x30c81c46a35ce411e5fbc1191a0a52ef.into(),
+                0x43b1cd7f598ece23881b00e3ed030688.into()
+            ),
+            (
+                0xf69f2445df4f9b17ad2b417be66c3710.into(),
+                0x7b0c785e27e8ad3f8223207104725dd4.into()
+            ),
+            (
+                0x3243f6a8885a308d313198a2e0370734.into(),
+                0x3925841d02dc09fbdc118597196a0b32.into()
+            ),
         ];
-        
-        static ref AES_192_VECTORS:[(AesBlock, AesBlock); 4] = [
-            (0x6bc1bee22e409f96e93d7e117393172a.into(), 0xbd334f1d6e45f25ff712a214571fa5cc.into()),
-            (0xae2d8a571e03ac9c9eb76fac45af8e51.into(), 0x974104846d0ad3ad7734ecb3ecee4eef.into()),
-            (0x30c81c46a35ce411e5fbc1191a0a52ef.into(), 0xef7afd2270e2e60adce0ba2face6444e.into()),
-            (0xf69f2445df4f9b17ad2b417be66c3710.into(), 0x9a4b41ba738d6c72fb16691603c18e0e.into())
+        static ref AES_192_VECTORS: [(AesBlock, AesBlock); 4] = [
+            (
+                0x6bc1bee22e409f96e93d7e117393172a.into(),
+                0xbd334f1d6e45f25ff712a214571fa5cc.into()
+            ),
+            (
+                0xae2d8a571e03ac9c9eb76fac45af8e51.into(),
+                0x974104846d0ad3ad7734ecb3ecee4eef.into()
+            ),
+            (
+                0x30c81c46a35ce411e5fbc1191a0a52ef.into(),
+                0xef7afd2270e2e60adce0ba2face6444e.into()
+            ),
+            (
+                0xf69f2445df4f9b17ad2b417be66c3710.into(),
+                0x9a4b41ba738d6c72fb16691603c18e0e.into()
+            )
         ];
-        
-        static ref AES_256_VECTORS:[(AesBlock, AesBlock); 4] = [
-            (0x6bc1bee22e409f96e93d7e117393172a.into(), 0xf3eed1bdb5d2a03c064b5a7e3db181f8.into()),
-            (0xae2d8a571e03ac9c9eb76fac45af8e51.into(), 0x591ccb10d410ed26dc5ba74a31362870.into()),
-            (0x30c81c46a35ce411e5fbc1191a0a52ef.into(), 0xb6ed21b99ca6f4f9f153e7b1beafed1d.into()),
-            (0xf69f2445df4f9b17ad2b417be66c3710.into(), 0x23304b7a39f9f3ff067d8d8f9e24ecc7.into())
+        static ref AES_256_VECTORS: [(AesBlock, AesBlock); 4] = [
+            (
+                0x6bc1bee22e409f96e93d7e117393172a.into(),
+                0xf3eed1bdb5d2a03c064b5a7e3db181f8.into()
+            ),
+            (
+                0xae2d8a571e03ac9c9eb76fac45af8e51.into(),
+                0x591ccb10d410ed26dc5ba74a31362870.into()
+            ),
+            (
+                0x30c81c46a35ce411e5fbc1191a0a52ef.into(),
+                0xb6ed21b99ca6f4f9f153e7b1beafed1d.into()
+            ),
+            (
+                0xf69f2445df4f9b17ad2b417be66c3710.into(),
+                0x23304b7a39f9f3ff067d8d8f9e24ecc7.into()
+            )
         ];
     }
 
@@ -922,7 +989,10 @@ mod tests {
 
     #[test]
     fn aes_256_test() {
-        let key = <[u8; 32]>::from_hex("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4").unwrap();
+        let key = <[u8; 32]>::from_hex(
+            "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+        )
+        .unwrap();
         let enc = Aes256Enc::from(key);
 
         aes_test!(enc: enc, AES_256_VECTORS);
