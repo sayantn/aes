@@ -1,0 +1,15 @@
+[package]
+name = "aes"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+vaes = []
+
+[dependencies]
+cfg-if = "1"
+
+[dev-dependencies]
+hex = "0"
+pretty_assertions = "1"
+lazy_static = "1"
