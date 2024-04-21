@@ -242,12 +242,12 @@ impl Debug for AesBlockX4 {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Aes128Enc {
     round_keys: [AesBlock; 11],
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Aes128Dec {
     round_keys: [AesBlock; 11],
 }
@@ -260,12 +260,12 @@ impl From<[u8; 16]> for Aes128Enc {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Aes192Enc {
     round_keys: [AesBlock; 13],
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Aes192Dec {
     round_keys: [AesBlock; 13],
 }
@@ -278,12 +278,12 @@ impl From<[u8; 24]> for Aes192Enc {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Aes256Enc {
     round_keys: [AesBlock; 15],
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Aes256Dec {
     round_keys: [AesBlock; 15],
 }

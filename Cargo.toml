@@ -1,7 +1,10 @@
 [package]
-name = "aes"
+name = "aes_crypto"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "A platform-agnostic library for the AES cipher (Rijndael)"
+repository = "https://github.com/sayantn/aes"
 
 [features]
 vaes = []

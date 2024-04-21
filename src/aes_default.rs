@@ -134,7 +134,7 @@ impl AesBlock {
     /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
     ///
     /// ```
-    /// # use aes::AesBlock;
+    /// # use aes_crypto::AesBlock;
     ///
     /// let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
     ///
@@ -180,7 +180,7 @@ impl AesBlock {
     /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
     ///
     /// ```
-    /// # use aes::AesBlock;
+    /// # use aes_crypto::AesBlock;
     ///
     ///let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
     ///
