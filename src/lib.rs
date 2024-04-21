@@ -32,18 +32,17 @@
 //! set or, in the future, ARM's `SVE2-AES` instructions.
 
 #![cfg_attr(
-    all(
-        feature = "vaes",
-        nightly,
-        any(target_arch = "x86", target_arch = "x86_64"),
-        any(target_feature = "avx512f", target_feature = "avx512vl"),
-        target_feature = "vaes"
-    ),
-    feature(stdarch_x86_avx512)
+all(
+feature = "vaes",
+nightly,
+any(target_arch = "x86", target_arch = "x86_64"),
+any(target_feature = "avx512f", target_feature = "avx512vl"),
+target_feature = "vaes"
+),
+feature(stdarch_x86_avx512)
 )]
 
 use cfg_if::cfg_if;
-use std::array::TryFromSliceError;
 use std::fmt::{Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 
 cfg_if! {
@@ -101,6 +100,14 @@ cfg_if! {
     }
 }
 
+fn slice_as_array<const N: usize>(value: &[u8]) -> Result<[u8; N], usize> {
+    if value.len() >= N {
+        Ok(unsafe { *(value.as_ptr() as *const _) })
+    } else {
+        Err(value.len())
+    }
+}
+
 impl Default for AesBlock {
     fn default() -> Self {
         Self::zero()
@@ -108,11 +115,11 @@ impl Default for AesBlock {
 }
 
 impl TryFrom<&[u8]> for AesBlock {
-    type Error = TryFromSliceError;
+    type Error = usize;
 
     #[inline]
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        <[u8; 16]>::try_from(value).map(AesBlock::from)
+        slice_as_array::<16>(value).map(AesBlock::from)
     }
 }
 
@@ -192,11 +199,11 @@ impl UpperHex for AesBlock {
 }
 
 impl TryFrom<&[u8]> for AesBlockX2 {
-    type Error = TryFromSliceError;
+    type Error = usize;
 
     #[inline]
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        <[u8; 32]>::try_from(value).map(Self::from)
+        slice_as_array::<32>(value).map(AesBlockX2::from)
     }
 }
 
@@ -217,11 +224,11 @@ impl Debug for AesBlockX2 {
 }
 
 impl TryFrom<&[u8]> for AesBlockX4 {
-    type Error = TryFromSliceError;
+    type Error = usize;
 
     #[inline]
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        <[u8; 64]>::try_from(value).map(Self::from)
+        slice_as_array::<64>(value).map(AesBlockX4::from)
     }
 }
 
@@ -822,7 +829,7 @@ mod tests {
         let key = <[u8; 32]>::from_hex(
             "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
         )
-        .unwrap();
+            .unwrap();
 
         let expanded = keygen_256(key);
         assert_eq!(expanded[0], 0x603deb1015ca71be2b73aef0857d7781_u128.into());
@@ -990,7 +997,7 @@ mod tests {
         let key = <[u8; 32]>::from_hex(
             "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
         )
-        .unwrap();
+            .unwrap();
         let enc = Aes256Enc::from(key);
 
         aes_test!(enc: enc, AES_256_VECTORS);
