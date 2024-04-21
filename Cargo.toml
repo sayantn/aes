@@ -1,18 +1,24 @@
 [package]
 name = "aes_crypto"
 version = "0.1.0"
+authors = ["Sayantan Chakraborty <schakraborty.student@gmail.com>"]
 edition = "2021"
 license = "MIT"
 description = "A platform-agnostic library for the AES cipher (Rijndael)"
 repository = "https://github.com/sayantn/aes"
+keywords = ["crypto", "aes", "rijndael"]
+categories = ["cryptography"]
 
 [features]
 vaes = []
 
 [dependencies]
-cfg-if = "1"
+cfg-if = "1.0.0"
 
 [dev-dependencies]
-hex = "0"
-pretty_assertions = "1"
-lazy_static = "1"
+hex = "0.4.3"
+pretty_assertions = "1.4.0"
+lazy_static = "1.4.0"
+
+[build-dependencies]
+rustc_version = "0.4.0"
