@@ -118,6 +118,13 @@ impl Default for AesBlock {
     }
 }
 
+impl From<&[u8;16]> for AesBlock {
+    #[inline]
+    fn from(value: &[u8; 16]) -> Self {
+        (*value).into()
+    }
+}
+
 impl TryFrom<&[u8]> for AesBlock {
     type Error = usize;
 
@@ -202,6 +209,13 @@ impl UpperHex for AesBlock {
     }
 }
 
+impl From<&[u8;32]> for AesBlockX2 {
+    #[inline]
+    fn from(value: &[u8; 32]) -> Self {
+        (*value).into()
+    }
+}
+
 impl TryFrom<&[u8]> for AesBlockX2 {
     type Error = usize;
 
@@ -223,6 +237,13 @@ impl From<AesBlockX2> for [u8; 32] {
 impl Debug for AesBlockX2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         <(AesBlock, AesBlock)>::from(*self).fmt(f)
+    }
+}
+
+impl From<&[u8;64]> for AesBlockX4 {
+    #[inline]
+    fn from(value: &[u8; 64]) -> Self {
+        (*value).into()
     }
 }
 
