@@ -1,6 +1,6 @@
 [package]
 name = "aes_crypto"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Sayantan Chakraborty <schakraborty.student@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -17,7 +17,6 @@ cfg-if = "1.0.0"
 
 [dev-dependencies]
 hex = "0.4.3"
-pretty_assertions = "1.4.0"
 lazy_static = "1.4.0"
 
 [build-dependencies]

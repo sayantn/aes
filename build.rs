@@ -1,7 +1,10 @@
-use rustc_version::{Channel, version_meta};
+use rustc_version::{version_meta, Channel::Nightly, VersionMeta};
 
 fn main() {
-    if let Channel::Nightly = version_meta().unwrap().channel {
+    if let Ok(VersionMeta {
+        channel: Nightly, ..
+    }) = version_meta()
+    {
         println!("cargo:rustc-cfg=nightly");
     }
 }
