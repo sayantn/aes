@@ -34,7 +34,6 @@
 #![cfg_attr(
     all(
         feature = "vaes",
-        nightly,
         any(target_arch = "x86", target_arch = "x86_64"),
         any(target_feature = "avx512f", target_feature = "avx512vl"),
         target_feature = "vaes"
@@ -71,7 +70,6 @@ cfg_if! {
 cfg_if! {
     if #[cfg(all(
         feature = "vaes",
-        nightly,
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx512vl",
         target_feature = "vaes"
@@ -87,7 +85,6 @@ cfg_if! {
 cfg_if! {
     if #[cfg(all(
         feature = "vaes",
-        nightly,
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx512f",
         target_feature = "vaes"
