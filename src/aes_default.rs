@@ -304,6 +304,7 @@ impl AesBlock {
     /// Performs the MixColumns operation
     #[inline]
     pub fn mc(self) -> Self {
+        #[inline(always)]
         fn _mc(x: u32) -> u32 {
             te0(td4_3(x >> 24)) ^ te1(td4_3(x >> 16)) ^ te2(td4_3(x >> 8)) ^ te3(td4_3(x))
         }
@@ -313,6 +314,7 @@ impl AesBlock {
     /// Performs the InvMixColumns operation
     #[inline]
     pub fn imc(self) -> Self {
+        #[inline(always)]
         fn _imc(x: u32) -> u32 {
             td0(te4_3(x >> 24)) ^ td1(te4_3(x >> 16)) ^ td2(te4_3(x >> 8)) ^ td3(te4_3(x))
         }
@@ -320,6 +322,7 @@ impl AesBlock {
     }
 }
 
+#[inline(always)]
 fn keygenassist(x: u32) -> u32 {
     te4_0(x >> 16) | te4_1(x >> 8) | te4_2(x) | te4_3(x >> 24)
 }
