@@ -155,6 +155,7 @@ impl AesBlock {
         }
     }
 
+    #[inline(always)]
     fn pre_enc(self, round_key: Self) -> Self {
         Self(unsafe { vaeseq_u8(self.0, round_key.0) })
     }
@@ -165,6 +166,7 @@ impl AesBlock {
         self.pre_enc(Self::zero()).mc() ^ round_key
     }
 
+    #[inline(always)]
     fn pre_dec(self, round_key: Self) -> Self {
         Self(unsafe { vaesdq_u8(self.0, round_key.0) })
     }

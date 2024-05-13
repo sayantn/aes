@@ -32,13 +32,13 @@
 //! set or, in the future, ARM's `SVE2-AES` instructions.
 
 #![cfg_attr(
-    all(
-        feature = "vaes",
-        any(target_arch = "x86", target_arch = "x86_64"),
-        any(target_feature = "avx512f", target_feature = "avx512vl"),
-        target_feature = "vaes"
-    ),
-    feature(stdarch_x86_avx512)
+all(
+feature = "vaes",
+any(target_arch = "x86", target_arch = "x86_64"),
+any(target_feature = "avx512f", target_feature = "avx512vl"),
+target_feature = "vaes"
+),
+feature(stdarch_x86_avx512)
 )]
 
 use cfg_if::cfg_if;
@@ -100,11 +100,18 @@ cfg_if! {
 #[cfg(test)]
 mod tests;
 
+#[inline(always)]
 fn slice_as_array<const N: usize>(value: &[u8]) -> Result<[u8; N], usize> {
     if value.len() >= N {
         Ok(unsafe { *(value.as_ptr() as *const _) })
     } else {
         Err(value.len())
+    }
+}
+
+impl AesBlock {
+    pub const fn new(value: [u8; 16]) -> Self {
+        unsafe { std::mem::transmute(value) }
     }
 }
 
@@ -115,7 +122,7 @@ impl Default for AesBlock {
     }
 }
 
-impl From<&[u8;16]> for AesBlock {
+impl From<&[u8; 16]> for AesBlock {
     #[inline]
     fn from(value: &[u8; 16]) -> Self {
         (*value).into()
@@ -206,7 +213,19 @@ impl UpperHex for AesBlock {
     }
 }
 
-impl From<&[u8;32]> for AesBlockX2 {
+impl AesBlockX2 {
+    pub const fn new(value: [u8; 32]) -> Self {
+        unsafe { std::mem::transmute(value) }
+    }
+}
+
+impl Default for AesBlockX2 {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl From<&[u8; 32]> for AesBlockX2 {
     #[inline]
     fn from(value: &[u8; 32]) -> Self {
         (*value).into()
@@ -237,7 +256,19 @@ impl Debug for AesBlockX2 {
     }
 }
 
-impl From<&[u8;64]> for AesBlockX4 {
+impl AesBlockX4 {
+    pub const fn new(value: [u8; 64]) -> Self {
+        unsafe { std::mem::transmute(value) }
+    }
+}
+
+impl Default for AesBlockX4 {
+    fn default() -> Self {
+        Self::zero()
+    }
+}
+
+impl From<&[u8; 64]> for AesBlockX4 {
     #[inline]
     fn from(value: &[u8; 64]) -> Self {
         (*value).into()

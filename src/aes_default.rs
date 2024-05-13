@@ -4,6 +4,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 #[repr(C, align(16))]
 pub struct AesBlock(u32, u32, u32, u32);
 
+#[inline(always)]
 fn load_u32_be(slice: &[u8]) -> u32 {
     ((slice[0] as u32) << 24)
         | ((slice[1] as u32) << 16)
@@ -11,6 +12,7 @@ fn load_u32_be(slice: &[u8]) -> u32 {
         | (slice[3] as u32)
 }
 
+#[inline(always)]
 fn store_u32_be(slice: &mut [u8], num: u32) {
     slice[0] = (num >> 24) as u8;
     slice[1] = (num >> 16) as u8;
