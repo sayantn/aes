@@ -1,4 +1,4 @@
-use crate::{Aes128Dec, Aes128Enc, Aes192Dec, Aes192Enc, Aes256Dec, Aes256Enc};
+use crate::*;
 use cfg_if::cfg_if;
 use std::arch::aarch64::*;
 use std::mem;
@@ -156,37 +156,37 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    fn pre_enc(self, round_key: Self) -> Self {
-        Self(unsafe { vaeseq_u8(self.0, round_key.0) })
+    pub(crate) fn pre_enc(self, round_key: Self) -> Self {
+        Self(unsafe { vaeseq_u8(self.0, round_key.0) }).mc()
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
-        self.pre_enc(Self::zero()).mc() ^ round_key
+        self.pre_enc(Self::zero()) ^ round_key
     }
 
     #[inline(always)]
-    fn pre_dec(self, round_key: Self) -> Self {
-        Self(unsafe { vaesdq_u8(self.0, round_key.0) })
+    pub(crate) fn pre_dec(self, round_key: Self) -> Self {
+        Self(unsafe { vaesdq_u8(self.0, round_key.0) }).imc()
     }
 
     /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
-        self.pre_dec(Self::zero()).imc() ^ round_key
+        self.pre_dec(Self::zero()) ^ round_key
     }
 
     /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
-        self.pre_enc(Self::zero()) ^ round_key
+        Self(unsafe { vaeseq_u8(self.0, Self::zero().0) }) ^ round_key
     }
 
     /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
-        self.pre_dec(Self::zero()) ^ round_key
+        Self(unsafe { vaesdq_u8(self.0, Self::zero().0) }) ^ round_key
     }
 
     /// Performs the MixColumns operation
@@ -202,6 +202,7 @@ impl AesBlock {
     }
 }
 
+#[inline(always)]
 unsafe fn sub_word(input: u32) -> u32 {
     let input = vreinterpretq_u8_u32(vdupq_n_u32(input));
 
@@ -295,119 +296,5 @@ pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
         columns[59] = columns[51] ^ columns[58];
 
         expanded_keys
-    }
-}
-
-impl Aes128Enc {
-    #[inline]
-    pub fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-        let acc = plaintext;
-        let acc = acc.pre_enc(self.round_keys[0]).mc();
-        let acc = acc.pre_enc(self.round_keys[1]).mc();
-        let acc = acc.pre_enc(self.round_keys[2]).mc();
-        let acc = acc.pre_enc(self.round_keys[3]).mc();
-        let acc = acc.pre_enc(self.round_keys[4]).mc();
-        let acc = acc.pre_enc(self.round_keys[5]).mc();
-        let acc = acc.pre_enc(self.round_keys[6]).mc();
-        let acc = acc.pre_enc(self.round_keys[7]).mc();
-        let acc = acc.pre_enc(self.round_keys[8]).mc();
-        acc.pre_enc(self.round_keys[9]) ^ self.round_keys[10]
-    }
-}
-
-impl Aes128Dec {
-    #[inline]
-    pub fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-        let acc = ciphertext;
-        let acc = acc.pre_dec(self.round_keys[0]).imc();
-        let acc = acc.pre_dec(self.round_keys[1]).imc();
-        let acc = acc.pre_dec(self.round_keys[2]).imc();
-        let acc = acc.pre_dec(self.round_keys[3]).imc();
-        let acc = acc.pre_dec(self.round_keys[4]).imc();
-        let acc = acc.pre_dec(self.round_keys[5]).imc();
-        let acc = acc.pre_dec(self.round_keys[6]).imc();
-        let acc = acc.pre_dec(self.round_keys[7]).imc();
-        let acc = acc.pre_dec(self.round_keys[8]).imc();
-        acc.pre_dec(self.round_keys[9]) ^ self.round_keys[10]
-    }
-}
-
-impl Aes192Enc {
-    #[inline]
-    pub fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-        let acc = plaintext;
-        let acc = acc.pre_enc(self.round_keys[0]).mc();
-        let acc = acc.pre_enc(self.round_keys[1]).mc();
-        let acc = acc.pre_enc(self.round_keys[2]).mc();
-        let acc = acc.pre_enc(self.round_keys[3]).mc();
-        let acc = acc.pre_enc(self.round_keys[4]).mc();
-        let acc = acc.pre_enc(self.round_keys[5]).mc();
-        let acc = acc.pre_enc(self.round_keys[6]).mc();
-        let acc = acc.pre_enc(self.round_keys[7]).mc();
-        let acc = acc.pre_enc(self.round_keys[8]).mc();
-        let acc = acc.pre_enc(self.round_keys[9]).mc();
-        let acc = acc.pre_enc(self.round_keys[10]).mc();
-        acc.pre_enc(self.round_keys[11]) ^ self.round_keys[12]
-    }
-}
-
-impl Aes192Dec {
-    #[inline]
-    pub fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-        let acc = ciphertext;
-        let acc = acc.pre_dec(self.round_keys[0]).imc();
-        let acc = acc.pre_dec(self.round_keys[1]).imc();
-        let acc = acc.pre_dec(self.round_keys[2]).imc();
-        let acc = acc.pre_dec(self.round_keys[3]).imc();
-        let acc = acc.pre_dec(self.round_keys[4]).imc();
-        let acc = acc.pre_dec(self.round_keys[5]).imc();
-        let acc = acc.pre_dec(self.round_keys[6]).imc();
-        let acc = acc.pre_dec(self.round_keys[7]).imc();
-        let acc = acc.pre_dec(self.round_keys[8]).imc();
-        let acc = acc.pre_dec(self.round_keys[9]).imc();
-        let acc = acc.pre_dec(self.round_keys[10]).imc();
-        acc.pre_dec(self.round_keys[11]) ^ self.round_keys[12]
-    }
-}
-
-impl Aes256Enc {
-    #[inline]
-    pub fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-        let acc = plaintext;
-        let acc = acc.pre_enc(self.round_keys[0]).mc();
-        let acc = acc.pre_enc(self.round_keys[1]).mc();
-        let acc = acc.pre_enc(self.round_keys[2]).mc();
-        let acc = acc.pre_enc(self.round_keys[3]).mc();
-        let acc = acc.pre_enc(self.round_keys[4]).mc();
-        let acc = acc.pre_enc(self.round_keys[5]).mc();
-        let acc = acc.pre_enc(self.round_keys[6]).mc();
-        let acc = acc.pre_enc(self.round_keys[7]).mc();
-        let acc = acc.pre_enc(self.round_keys[8]).mc();
-        let acc = acc.pre_enc(self.round_keys[9]).mc();
-        let acc = acc.pre_enc(self.round_keys[10]).mc();
-        let acc = acc.pre_enc(self.round_keys[11]).mc();
-        let acc = acc.pre_enc(self.round_keys[12]).mc();
-        acc.pre_enc(self.round_keys[13]) ^ self.round_keys[14]
-    }
-}
-
-impl Aes256Dec {
-    #[inline]
-    pub fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-        let acc = ciphertext;
-        let acc = acc.pre_dec(self.round_keys[0]).imc();
-        let acc = acc.pre_dec(self.round_keys[1]).imc();
-        let acc = acc.pre_dec(self.round_keys[2]).imc();
-        let acc = acc.pre_dec(self.round_keys[3]).imc();
-        let acc = acc.pre_dec(self.round_keys[4]).imc();
-        let acc = acc.pre_dec(self.round_keys[5]).imc();
-        let acc = acc.pre_dec(self.round_keys[6]).imc();
-        let acc = acc.pre_dec(self.round_keys[7]).imc();
-        let acc = acc.pre_dec(self.round_keys[8]).imc();
-        let acc = acc.pre_dec(self.round_keys[9]).imc();
-        let acc = acc.pre_dec(self.round_keys[10]).imc();
-        let acc = acc.pre_dec(self.round_keys[11]).imc();
-        let acc = acc.pre_dec(self.round_keys[12]).imc();
-        acc.pre_dec(self.round_keys[13]) ^ self.round_keys[14]
     }
 }

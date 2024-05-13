@@ -181,6 +181,7 @@ impl AesBlock {
     }
 }
 
+#[inline(always)]
 unsafe fn mix(vector: __m128i) -> __m128i {
     let temp = _mm_xor_si128(vector, _mm_bslli_si128::<4>(vector));
     _mm_xor_si128(temp, _mm_bslli_si128::<8>(temp))
@@ -200,6 +201,7 @@ fn keyexp_128<const RCON: i32>(prev_rkey: AesBlock) -> AesBlock {
 fn keyexp_192<const RCON1: i32, const RCON2: i32>(
     (state1, state2): &mut (AesBlock, AesBlock),
 ) -> (AesBlock, AesBlock, AesBlock) {
+    #[inline(always)]
     unsafe fn fwd<const RCON: i32>(state1: &mut AesBlock, state2: &mut AesBlock) {
         state1.0 = _mm_xor_si128(
             mix(state1.0),

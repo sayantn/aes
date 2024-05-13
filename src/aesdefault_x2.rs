@@ -128,10 +128,22 @@ impl AesBlockX2 {
         Self(self.0.shl::<N>(), self.1.shl::<N>())
     }
 
+    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
+    #[inline(always)]
+    pub(crate) fn pre_enc(self, round_key: Self) -> Self {
+        Self(self.0.pre_enc(round_key.0), self.1.pre_enc(round_key.1))
+    }
+
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(self.0.enc(round_key.0), self.1.enc(round_key.1))
+    }
+
+    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
+    #[inline(always)]
+    pub(crate) fn pre_dec(self, round_key: Self) -> Self {
+        Self(self.0.pre_dec(round_key.0), self.1.pre_dec(round_key.1))
     }
 
     /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
