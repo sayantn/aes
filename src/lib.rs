@@ -32,13 +32,13 @@
 //! set or, in the future, ARM's `SVE2-AES` instructions.
 
 #![cfg_attr(
-all(
-feature = "vaes",
-any(target_arch = "x86", target_arch = "x86_64"),
-any(target_feature = "avx512f", target_feature = "avx512vl"),
-target_feature = "vaes"
-),
-feature(stdarch_x86_avx512)
+    all(
+        feature = "vaes",
+        any(target_arch = "x86", target_arch = "x86_64"),
+        any(target_feature = "avx512f", target_feature = "avx512vl"),
+        target_feature = "vaes"
+    ),
+    feature(stdarch_x86_avx512)
 )]
 
 use cfg_if::cfg_if;
@@ -315,33 +315,17 @@ pub trait AesEncrypt<const KEY_LEN: usize>: From<[u8; KEY_LEN]> + private::Seale
 
     fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock;
 
-    #[inline]
-    fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-        let (a, b) = plaintext.into();
-        (self.encrypt_block(a), self.encrypt_block(b)).into()
-    }
+    fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2;
 
-    #[inline]
-    fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-        let (a, b) = plaintext.into();
-        (self.encrypt_2_blocks(a), self.encrypt_2_blocks(b)).into()
-    }
+    fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4;
 }
 
-pub trait AesDecrypt<const KEY_LEN: usize>: private::Sealed {
+pub trait AesDecrypt<const KEY_LEN: usize>: From<[u8; KEY_LEN]> + private::Sealed {
     fn decrypt_block(&self, plaintext: AesBlock) -> AesBlock;
 
-    #[inline]
-    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-        let (a, b) = ciphertext.into();
-        (self.decrypt_block(a), self.decrypt_block(b)).into()
-    }
+    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2;
 
-    #[inline]
-    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-        let (a, b) = ciphertext.into();
-        (self.decrypt_2_blocks(a), self.decrypt_2_blocks(b)).into()
-    }
+    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4;
 }
 
 #[derive(Clone, Debug)]
@@ -440,686 +424,168 @@ fn decryption_round_keys<const N: usize>(round_keys: &[AesBlock; N]) -> [AesBloc
 }
 
 cfg_if! {
-    if #[cfg(all(
-        target_arch = "aarch64",
-        target_feature = "aes"
-    ))] {
-        impl AesEncrypt<16> for Aes128Enc {
-            type Decrypter = Aes128Dec;
+if #[cfg(all(
+    target_arch = "aarch64",
+    target_feature = "aes"
+))] {
+    macro_rules! impl_aes {
+        (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
+            let mut acc = $plaintext;
+            for i in 0..($max - 1) {
+                acc = acc.aese($round_keys[i].into()).mc();
+            }
+            acc.aese($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
+        }};
+        (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
+            let mut acc = $ciphertext;
+            for i in 0..($max - 1) {
+                acc = acc.aesd($round_keys[i].into()).imc();
+            }
+            acc.aesd($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
+        }};
+    }
+}else{
+    macro_rules! impl_aes {
+        (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
+            let mut acc = $plaintext ^ $round_keys[0].into();
+            for i in 1..$max {
+                acc = acc.enc($round_keys[i].into());
+            }
+            acc.enc_last($round_keys[$max].into())
+        }};
+        (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
+            let mut acc = $ciphertext ^ $round_keys[0].into();
+            for i in 1..$max {
+                acc = acc.dec($round_keys[i].into());
+            }
+            acc.dec_last($round_keys[$max].into())
+        }};
+    }
+}
+}
 
-            fn decrypter(&self) -> Self::Decrypter {
-                Aes128Dec {
-                    round_keys: decryption_round_keys(&self.round_keys),
-                }
-            }
+impl AesEncrypt<16> for Aes128Enc {
+    type Decrypter = Aes128Dec;
 
-            #[inline]
-            fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0]);
-                let acc = acc.pre_enc(self.round_keys[1]);
-                let acc = acc.pre_enc(self.round_keys[2]);
-                let acc = acc.pre_enc(self.round_keys[3]);
-                let acc = acc.pre_enc(self.round_keys[4]);
-                let acc = acc.pre_enc(self.round_keys[5]);
-                let acc = acc.pre_enc(self.round_keys[6]);
-                let acc = acc.pre_enc(self.round_keys[7]);
-                let acc = acc.pre_enc(self.round_keys[8]);
-                acc.pre_enc(self.round_keys[9]) ^ self.round_keys[10]
-            }
-        
-            #[inline]
-            fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0].into());
-                let acc = acc.pre_enc(self.round_keys[1].into());
-                let acc = acc.pre_enc(self.round_keys[2].into());
-                let acc = acc.pre_enc(self.round_keys[3].into());
-                let acc = acc.pre_enc(self.round_keys[4].into());
-                let acc = acc.pre_enc(self.round_keys[5].into());
-                let acc = acc.pre_enc(self.round_keys[6].into());
-                let acc = acc.pre_enc(self.round_keys[7].into());
-                let acc = acc.pre_enc(self.round_keys[8].into());
-                acc.pre_enc(self.round_keys[9].into()) ^ self.round_keys[10].into()
-            }
-        
-            #[inline]
-            fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0].into());
-                let acc = acc.pre_enc(self.round_keys[1].into());
-                let acc = acc.pre_enc(self.round_keys[2].into());
-                let acc = acc.pre_enc(self.round_keys[3].into());
-                let acc = acc.pre_enc(self.round_keys[4].into());
-                let acc = acc.pre_enc(self.round_keys[5].into());
-                let acc = acc.pre_enc(self.round_keys[6].into());
-                let acc = acc.pre_enc(self.round_keys[7].into());
-                let acc = acc.pre_enc(self.round_keys[8].into());
-                acc.pre_enc(self.round_keys[9].into()) ^ self.round_keys[10].into()
-            }
-        }       
-        
-        impl AesDecrypt<16> for Aes128Dec {
-            #[inline]
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0]);
-                let acc = acc.pre_dec(self.round_keys[1]);
-                let acc = acc.pre_dec(self.round_keys[2]);
-                let acc = acc.pre_dec(self.round_keys[3]);
-                let acc = acc.pre_dec(self.round_keys[4]);
-                let acc = acc.pre_dec(self.round_keys[5]);
-                let acc = acc.pre_dec(self.round_keys[6]);
-                let acc = acc.pre_dec(self.round_keys[7]);
-                let acc = acc.pre_dec(self.round_keys[8]);
-                acc.pre_dec(self.round_keys[9]) ^ self.round_keys[10]
-            }
-        
-            #[inline]
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0].into());
-                let acc = acc.pre_dec(self.round_keys[1].into());
-                let acc = acc.pre_dec(self.round_keys[2].into());
-                let acc = acc.pre_dec(self.round_keys[3].into());
-                let acc = acc.pre_dec(self.round_keys[4].into());
-                let acc = acc.pre_dec(self.round_keys[5].into());
-                let acc = acc.pre_dec(self.round_keys[6].into());
-                let acc = acc.pre_dec(self.round_keys[7].into());
-                let acc = acc.pre_dec(self.round_keys[8].into());
-                acc.pre_dec(self.round_keys[9].into()) ^ self.round_keys[10].into()
-            }
-        
-            #[inline]
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0].into());
-                let acc = acc.pre_dec(self.round_keys[1].into());
-                let acc = acc.pre_dec(self.round_keys[2].into());
-                let acc = acc.pre_dec(self.round_keys[3].into());
-                let acc = acc.pre_dec(self.round_keys[4].into());
-                let acc = acc.pre_dec(self.round_keys[5].into());
-                let acc = acc.pre_dec(self.round_keys[6].into());
-                let acc = acc.pre_dec(self.round_keys[7].into());
-                let acc = acc.pre_dec(self.round_keys[8].into());
-                acc.pre_dec(self.round_keys[9].into()) ^ self.round_keys[10].into()
-            }
+    fn decrypter(&self) -> Self::Decrypter {
+        Aes128Dec {
+            round_keys: decryption_round_keys(&self.round_keys),
         }
+    }
 
-        impl AesEncrypt<24> for Aes192Enc {
-            type Decrypter = Aes192Dec;
-        
-            fn decrypter(&self) -> Self::Decrypter {
-                Aes192Dec {
-                    round_keys: decryption_round_keys(&self.round_keys),
-                }
-            }
-        
-            #[inline]
-            fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0]);
-                let acc = acc.pre_enc(self.round_keys[1]);
-                let acc = acc.pre_enc(self.round_keys[2]);
-                let acc = acc.pre_enc(self.round_keys[3]);
-                let acc = acc.pre_enc(self.round_keys[4]);
-                let acc = acc.pre_enc(self.round_keys[5]);
-                let acc = acc.pre_enc(self.round_keys[6]);
-                let acc = acc.pre_enc(self.round_keys[7]);
-                let acc = acc.pre_enc(self.round_keys[8]);
-                let acc = acc.pre_enc(self.round_keys[9]);
-                let acc = acc.pre_enc(self.round_keys[10]);
-                acc.pre_enc(self.round_keys[11]) ^ self.round_keys[12]
-            }
-        
-            #[inline]
-            fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0].into());
-                let acc = acc.pre_enc(self.round_keys[1].into());
-                let acc = acc.pre_enc(self.round_keys[2].into());
-                let acc = acc.pre_enc(self.round_keys[3].into());
-                let acc = acc.pre_enc(self.round_keys[4].into());
-                let acc = acc.pre_enc(self.round_keys[5].into());
-                let acc = acc.pre_enc(self.round_keys[6].into());
-                let acc = acc.pre_enc(self.round_keys[7].into());
-                let acc = acc.pre_enc(self.round_keys[8].into());
-                let acc = acc.pre_enc(self.round_keys[9].into());
-                let acc = acc.pre_enc(self.round_keys[10].into());
-                acc.pre_enc(self.round_keys[11].into()) ^ self.round_keys[12].into()
-            }
-        
-            #[inline]
-            fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0].into());
-                let acc = acc.pre_enc(self.round_keys[1].into());
-                let acc = acc.pre_enc(self.round_keys[2].into());
-                let acc = acc.pre_enc(self.round_keys[3].into());
-                let acc = acc.pre_enc(self.round_keys[4].into());
-                let acc = acc.pre_enc(self.round_keys[5].into());
-                let acc = acc.pre_enc(self.round_keys[6].into());
-                let acc = acc.pre_enc(self.round_keys[7].into());
-                let acc = acc.pre_enc(self.round_keys[8].into());
-                let acc = acc.pre_enc(self.round_keys[9].into());
-                let acc = acc.pre_enc(self.round_keys[10].into());
-                acc.pre_enc(self.round_keys[11].into()) ^ self.round_keys[12].into()
-            }
+    #[inline]
+    fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
+        impl_aes!(enc: self.round_keys, plaintext, 10)
+    }
+
+    #[inline]
+    fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
+        impl_aes!(enc: self.round_keys, plaintext, 10)
+    }
+
+    #[inline]
+    fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
+        impl_aes!(enc: self.round_keys, plaintext, 10)
+    }
+}
+
+impl AesDecrypt<16> for Aes128Dec {
+    #[inline]
+    fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
+        impl_aes!(dec: self.round_keys, ciphertext, 10)
+    }
+
+    #[inline]
+    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
+        impl_aes!(dec: self.round_keys, ciphertext, 10)
+    }
+
+    #[inline]
+    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
+        impl_aes!(dec: self.round_keys, ciphertext, 10)
+    }
+}
+
+impl AesEncrypt<24> for Aes192Enc {
+    type Decrypter = Aes192Dec;
+
+    fn decrypter(&self) -> Self::Decrypter {
+        Aes192Dec {
+            round_keys: decryption_round_keys(&self.round_keys),
         }
-        
-        impl AesDecrypt<24> for Aes192Dec {
-            #[inline]
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0]);
-                let acc = acc.pre_dec(self.round_keys[1]);
-                let acc = acc.pre_dec(self.round_keys[2]);
-                let acc = acc.pre_dec(self.round_keys[3]);
-                let acc = acc.pre_dec(self.round_keys[4]);
-                let acc = acc.pre_dec(self.round_keys[5]);
-                let acc = acc.pre_dec(self.round_keys[6]);
-                let acc = acc.pre_dec(self.round_keys[7]);
-                let acc = acc.pre_dec(self.round_keys[8]);
-                let acc = acc.pre_dec(self.round_keys[9]);
-                let acc = acc.pre_dec(self.round_keys[10]);
-                acc.pre_dec(self.round_keys[11]) ^ self.round_keys[12]
-            }
-        
-            #[inline]
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0].into());
-                let acc = acc.pre_dec(self.round_keys[1].into());
-                let acc = acc.pre_dec(self.round_keys[2].into());
-                let acc = acc.pre_dec(self.round_keys[3].into());
-                let acc = acc.pre_dec(self.round_keys[4].into());
-                let acc = acc.pre_dec(self.round_keys[5].into());
-                let acc = acc.pre_dec(self.round_keys[6].into());
-                let acc = acc.pre_dec(self.round_keys[7].into());
-                let acc = acc.pre_dec(self.round_keys[8].into());
-                let acc = acc.pre_dec(self.round_keys[9].into());
-                let acc = acc.pre_dec(self.round_keys[10].into());
-                acc.pre_dec(self.round_keys[11].into()) ^ self.round_keys[12].into()
-            }
-        
-            #[inline]
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0].into());
-                let acc = acc.pre_dec(self.round_keys[1].into());
-                let acc = acc.pre_dec(self.round_keys[2].into());
-                let acc = acc.pre_dec(self.round_keys[3].into());
-                let acc = acc.pre_dec(self.round_keys[4].into());
-                let acc = acc.pre_dec(self.round_keys[5].into());
-                let acc = acc.pre_dec(self.round_keys[6].into());
-                let acc = acc.pre_dec(self.round_keys[7].into());
-                let acc = acc.pre_dec(self.round_keys[8].into());
-                let acc = acc.pre_dec(self.round_keys[9].into());
-                let acc = acc.pre_dec(self.round_keys[10].into());
-                acc.pre_dec(self.round_keys[11].into()) ^ self.round_keys[12].into()
-            }
+    }
+
+    #[inline]
+    fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
+        impl_aes!(enc: self.round_keys, plaintext, 12)
+    }
+
+    #[inline]
+    fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
+        impl_aes!(enc: self.round_keys, plaintext, 12)
+    }
+
+    #[inline]
+    fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
+        impl_aes!(enc: self.round_keys, plaintext, 12)
+    }
+}
+
+impl AesDecrypt<24> for Aes192Dec {
+    #[inline]
+    fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
+        impl_aes!(dec: self.round_keys, ciphertext, 12)
+    }
+
+    #[inline]
+    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
+        impl_aes!(dec: self.round_keys, ciphertext, 12)
+    }
+
+    #[inline]
+    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
+        impl_aes!(dec: self.round_keys, ciphertext, 12)
+    }
+}
+
+impl AesEncrypt<32> for Aes256Enc {
+    type Decrypter = Aes256Dec;
+
+    fn decrypter(&self) -> Self::Decrypter {
+        Aes256Dec {
+            round_keys: decryption_round_keys(&self.round_keys),
         }
-        
-        impl AesEncrypt<32> for Aes256Enc {
-            type Decrypter = Aes256Dec;
-        
-            fn decrypter(&self) -> Self::Decrypter {
-                Aes256Dec {
-                    round_keys: decryption_round_keys(&self.round_keys),
-                }
-            }
-        
-            #[inline]
-            fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0]);
-                let acc = acc.pre_enc(self.round_keys[1]);
-                let acc = acc.pre_enc(self.round_keys[2]);
-                let acc = acc.pre_enc(self.round_keys[3]);
-                let acc = acc.pre_enc(self.round_keys[4]);
-                let acc = acc.pre_enc(self.round_keys[5]);
-                let acc = acc.pre_enc(self.round_keys[6]);
-                let acc = acc.pre_enc(self.round_keys[7]);
-                let acc = acc.pre_enc(self.round_keys[8]);
-                let acc = acc.pre_enc(self.round_keys[9]);
-                let acc = acc.pre_enc(self.round_keys[10]);
-                let acc = acc.pre_enc(self.round_keys[11]);
-                let acc = acc.pre_enc(self.round_keys[12]);
-                acc.pre_enc(self.round_keys[13]) ^ self.round_keys[14]
-            }
-        
-            #[inline]
-            fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0].into());
-                let acc = acc.pre_enc(self.round_keys[1].into());
-                let acc = acc.pre_enc(self.round_keys[2].into());
-                let acc = acc.pre_enc(self.round_keys[3].into());
-                let acc = acc.pre_enc(self.round_keys[4].into());
-                let acc = acc.pre_enc(self.round_keys[5].into());
-                let acc = acc.pre_enc(self.round_keys[6].into());
-                let acc = acc.pre_enc(self.round_keys[7].into());
-                let acc = acc.pre_enc(self.round_keys[8].into());
-                let acc = acc.pre_enc(self.round_keys[9].into());
-                let acc = acc.pre_enc(self.round_keys[10].into());
-                let acc = acc.pre_enc(self.round_keys[11].into());
-                let acc = acc.pre_enc(self.round_keys[12].into());
-                acc.pre_enc(self.round_keys[13].into()) ^ self.round_keys[14].into()
-            }
-        
-            #[inline]
-            fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-                let acc = plaintext;
-                let acc = acc.pre_enc(self.round_keys[0].into());
-                let acc = acc.pre_enc(self.round_keys[1].into());
-                let acc = acc.pre_enc(self.round_keys[2].into());
-                let acc = acc.pre_enc(self.round_keys[3].into());
-                let acc = acc.pre_enc(self.round_keys[4].into());
-                let acc = acc.pre_enc(self.round_keys[5].into());
-                let acc = acc.pre_enc(self.round_keys[6].into());
-                let acc = acc.pre_enc(self.round_keys[7].into());
-                let acc = acc.pre_enc(self.round_keys[8].into());
-                let acc = acc.pre_enc(self.round_keys[9].into());
-                let acc = acc.pre_enc(self.round_keys[10].into());
-                let acc = acc.pre_enc(self.round_keys[11].into());
-                let acc = acc.pre_enc(self.round_keys[12].into());
-                acc.pre_enc(self.round_keys[13].into()) ^ self.round_keys[14].into()
-            }
-        }
-        
-        impl AesDecrypt<32> for Aes256Dec {
-            #[inline]
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0]);
-                let acc = acc.pre_dec(self.round_keys[1]);
-                let acc = acc.pre_dec(self.round_keys[2]);
-                let acc = acc.pre_dec(self.round_keys[3]);
-                let acc = acc.pre_dec(self.round_keys[4]);
-                let acc = acc.pre_dec(self.round_keys[5]);
-                let acc = acc.pre_dec(self.round_keys[6]);
-                let acc = acc.pre_dec(self.round_keys[7]);
-                let acc = acc.pre_dec(self.round_keys[8]);
-                let acc = acc.pre_dec(self.round_keys[9]);
-                let acc = acc.pre_dec(self.round_keys[10]);
-                let acc = acc.pre_dec(self.round_keys[11]);
-                let acc = acc.pre_dec(self.round_keys[12]);
-                acc.pre_dec(self.round_keys[13]) ^ self.round_keys[14]
-            }
-        
-            #[inline]
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0].into());
-                let acc = acc.pre_dec(self.round_keys[1].into());
-                let acc = acc.pre_dec(self.round_keys[2].into());
-                let acc = acc.pre_dec(self.round_keys[3].into());
-                let acc = acc.pre_dec(self.round_keys[4].into());
-                let acc = acc.pre_dec(self.round_keys[5].into());
-                let acc = acc.pre_dec(self.round_keys[6].into());
-                let acc = acc.pre_dec(self.round_keys[7].into());
-                let acc = acc.pre_dec(self.round_keys[8].into());
-                let acc = acc.pre_dec(self.round_keys[9].into());
-                let acc = acc.pre_dec(self.round_keys[10].into());
-                let acc = acc.pre_dec(self.round_keys[11].into());
-                let acc = acc.pre_dec(self.round_keys[12].into());
-                acc.pre_dec(self.round_keys[13].into()) ^ self.round_keys[14].into()
-            }
-        
-            #[inline]
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let acc = ciphertext;
-                let acc = acc.pre_dec(self.round_keys[0].into());
-                let acc = acc.pre_dec(self.round_keys[1].into());
-                let acc = acc.pre_dec(self.round_keys[2].into());
-                let acc = acc.pre_dec(self.round_keys[3].into());
-                let acc = acc.pre_dec(self.round_keys[4].into());
-                let acc = acc.pre_dec(self.round_keys[5].into());
-                let acc = acc.pre_dec(self.round_keys[6].into());
-                let acc = acc.pre_dec(self.round_keys[7].into());
-                let acc = acc.pre_dec(self.round_keys[8].into());
-                let acc = acc.pre_dec(self.round_keys[9].into());
-                let acc = acc.pre_dec(self.round_keys[10].into());
-                let acc = acc.pre_dec(self.round_keys[11].into());
-                let acc = acc.pre_dec(self.round_keys[12].into());
-                acc.pre_dec(self.round_keys[13].into()) ^ self.round_keys[14].into()
-            }
-        }
-    }else{
-        impl AesEncrypt<16> for Aes128Enc {
-            type Decrypter = Aes128Dec;
+    }
 
-            fn decrypter(&self) -> Self::Decrypter {
-                Aes128Dec { round_keys: decryption_round_keys(&self.round_keys) }
-            }
+    #[inline]
+    fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
+        impl_aes!(enc: self.round_keys, plaintext, 14)
+    }
 
-            #[inline]
-            fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                let acc = plaintext ^ self.round_keys[0];
-                let acc = acc.enc(self.round_keys[1]);
-                let acc = acc.enc(self.round_keys[2]);
-                let acc = acc.enc(self.round_keys[3]);
-                let acc = acc.enc(self.round_keys[4]);
-                let acc = acc.enc(self.round_keys[5]);
-                let acc = acc.enc(self.round_keys[6]);
-                let acc = acc.enc(self.round_keys[7]);
-                let acc = acc.enc(self.round_keys[8]);
-                let acc = acc.enc(self.round_keys[9]);
-                acc.enc_last(self.round_keys[10])
-            }
+    #[inline]
+    fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
+        impl_aes!(enc: self.round_keys, plaintext, 14)
+    }
 
-            #[inline]
-            fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-                let acc = plaintext ^ self.round_keys[0].into();
-                let acc = acc.enc(self.round_keys[1].into());
-                let acc = acc.enc(self.round_keys[2].into());
-                let acc = acc.enc(self.round_keys[3].into());
-                let acc = acc.enc(self.round_keys[4].into());
-                let acc = acc.enc(self.round_keys[5].into());
-                let acc = acc.enc(self.round_keys[6].into());
-                let acc = acc.enc(self.round_keys[7].into());
-                let acc = acc.enc(self.round_keys[8].into());
-                let acc = acc.enc(self.round_keys[9].into());
-                acc.enc_last(self.round_keys[10].into())
-            }
+    #[inline]
+    fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
+        impl_aes!(enc: self.round_keys, plaintext, 14)
+    }
+}
 
-            #[inline]
-            fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-                let acc = plaintext ^ self.round_keys[0].into();
-                let acc = acc.enc(self.round_keys[1].into());
-                let acc = acc.enc(self.round_keys[2].into());
-                let acc = acc.enc(self.round_keys[3].into());
-                let acc = acc.enc(self.round_keys[4].into());
-                let acc = acc.enc(self.round_keys[5].into());
-                let acc = acc.enc(self.round_keys[6].into());
-                let acc = acc.enc(self.round_keys[7].into());
-                let acc = acc.enc(self.round_keys[8].into());
-                let acc = acc.enc(self.round_keys[9].into());
-                acc.enc_last(self.round_keys[10].into())
-            }
-        }
+impl AesDecrypt<32> for Aes256Dec {
+    #[inline]
+    fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
+        impl_aes!(dec: self.round_keys, ciphertext, 14)
+    }
 
-        impl AesDecrypt<16> for Aes128Dec {
-            #[inline]
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                let acc = ciphertext ^ self.round_keys[0];
-                let acc = acc.dec(self.round_keys[1]);
-                let acc = acc.dec(self.round_keys[2]);
-                let acc = acc.dec(self.round_keys[3]);
-                let acc = acc.dec(self.round_keys[4]);
-                let acc = acc.dec(self.round_keys[5]);
-                let acc = acc.dec(self.round_keys[6]);
-                let acc = acc.dec(self.round_keys[7]);
-                let acc = acc.dec(self.round_keys[8]);
-                let acc = acc.dec(self.round_keys[9]);
-                acc.dec_last(self.round_keys[10])
-            }
+    #[inline]
+    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
+        impl_aes!(dec: self.round_keys, ciphertext, 14)
+    }
 
-            #[inline]
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let acc = ciphertext ^ self.round_keys[0].into();
-                let acc = acc.dec(self.round_keys[1].into());
-                let acc = acc.dec(self.round_keys[2].into());
-                let acc = acc.dec(self.round_keys[3].into());
-                let acc = acc.dec(self.round_keys[4].into());
-                let acc = acc.dec(self.round_keys[5].into());
-                let acc = acc.dec(self.round_keys[6].into());
-                let acc = acc.dec(self.round_keys[7].into());
-                let acc = acc.dec(self.round_keys[8].into());
-                let acc = acc.dec(self.round_keys[9].into());
-                acc.dec_last(self.round_keys[10].into())
-            }
-
-            #[inline]
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let acc = ciphertext ^ self.round_keys[0].into();
-                let acc = acc.dec(self.round_keys[1].into());
-                let acc = acc.dec(self.round_keys[2].into());
-                let acc = acc.dec(self.round_keys[3].into());
-                let acc = acc.dec(self.round_keys[4].into());
-                let acc = acc.dec(self.round_keys[5].into());
-                let acc = acc.dec(self.round_keys[6].into());
-                let acc = acc.dec(self.round_keys[7].into());
-                let acc = acc.dec(self.round_keys[8].into());
-                let acc = acc.dec(self.round_keys[9].into());
-                acc.dec_last(self.round_keys[10].into())
-            }
-        }
-
-        impl AesEncrypt<24> for Aes192Enc {
-            type Decrypter = Aes192Dec;
-
-            fn decrypter(&self) -> Self::Decrypter {
-                Aes192Dec { round_keys: decryption_round_keys(&self.round_keys) }
-            }
-
-            #[inline]
-            fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                let acc = plaintext ^ self.round_keys[0];
-                let acc = acc.enc(self.round_keys[1]);
-                let acc = acc.enc(self.round_keys[2]);
-                let acc = acc.enc(self.round_keys[3]);
-                let acc = acc.enc(self.round_keys[4]);
-                let acc = acc.enc(self.round_keys[5]);
-                let acc = acc.enc(self.round_keys[6]);
-                let acc = acc.enc(self.round_keys[7]);
-                let acc = acc.enc(self.round_keys[8]);
-                let acc = acc.enc(self.round_keys[9]);
-                let acc = acc.enc(self.round_keys[10]);
-                let acc = acc.enc(self.round_keys[11]);
-                acc.enc_last(self.round_keys[12])
-            }
-
-            #[inline]
-            fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-                let acc = plaintext ^ self.round_keys[0].into();
-                let acc = acc.enc(self.round_keys[1].into());
-                let acc = acc.enc(self.round_keys[2].into());
-                let acc = acc.enc(self.round_keys[3].into());
-                let acc = acc.enc(self.round_keys[4].into());
-                let acc = acc.enc(self.round_keys[5].into());
-                let acc = acc.enc(self.round_keys[6].into());
-                let acc = acc.enc(self.round_keys[7].into());
-                let acc = acc.enc(self.round_keys[8].into());
-                let acc = acc.enc(self.round_keys[9].into());
-                let acc = acc.enc(self.round_keys[10].into());
-                let acc = acc.enc(self.round_keys[11].into());
-                acc.enc_last(self.round_keys[12].into())
-            }
-
-            #[inline]
-            fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-                let acc = plaintext ^ self.round_keys[0].into();
-                let acc = acc.enc(self.round_keys[1].into());
-                let acc = acc.enc(self.round_keys[2].into());
-                let acc = acc.enc(self.round_keys[3].into());
-                let acc = acc.enc(self.round_keys[4].into());
-                let acc = acc.enc(self.round_keys[5].into());
-                let acc = acc.enc(self.round_keys[6].into());
-                let acc = acc.enc(self.round_keys[7].into());
-                let acc = acc.enc(self.round_keys[8].into());
-                let acc = acc.enc(self.round_keys[9].into());
-                let acc = acc.enc(self.round_keys[10].into());
-                let acc = acc.enc(self.round_keys[11].into());
-                acc.enc_last(self.round_keys[12].into())
-            }
-        }
-
-        impl AesDecrypt<24> for Aes192Dec {
-            #[inline]
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                let acc = ciphertext ^ self.round_keys[0];
-                let acc = acc.dec(self.round_keys[1]);
-                let acc = acc.dec(self.round_keys[2]);
-                let acc = acc.dec(self.round_keys[3]);
-                let acc = acc.dec(self.round_keys[4]);
-                let acc = acc.dec(self.round_keys[5]);
-                let acc = acc.dec(self.round_keys[6]);
-                let acc = acc.dec(self.round_keys[7]);
-                let acc = acc.dec(self.round_keys[8]);
-                let acc = acc.dec(self.round_keys[9]);
-                let acc = acc.dec(self.round_keys[10]);
-                let acc = acc.dec(self.round_keys[11]);
-                acc.dec_last(self.round_keys[12])
-            }
-
-            #[inline]
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let acc = ciphertext ^ self.round_keys[0].into();
-                let acc = acc.dec(self.round_keys[1].into());
-                let acc = acc.dec(self.round_keys[2].into());
-                let acc = acc.dec(self.round_keys[3].into());
-                let acc = acc.dec(self.round_keys[4].into());
-                let acc = acc.dec(self.round_keys[5].into());
-                let acc = acc.dec(self.round_keys[6].into());
-                let acc = acc.dec(self.round_keys[7].into());
-                let acc = acc.dec(self.round_keys[8].into());
-                let acc = acc.dec(self.round_keys[9].into());
-                let acc = acc.dec(self.round_keys[10].into());
-                let acc = acc.dec(self.round_keys[11].into());
-                acc.dec_last(self.round_keys[12].into())
-            }
-
-            #[inline]
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let acc = ciphertext ^ self.round_keys[0].into();
-                let acc = acc.dec(self.round_keys[1].into());
-                let acc = acc.dec(self.round_keys[2].into());
-                let acc = acc.dec(self.round_keys[3].into());
-                let acc = acc.dec(self.round_keys[4].into());
-                let acc = acc.dec(self.round_keys[5].into());
-                let acc = acc.dec(self.round_keys[6].into());
-                let acc = acc.dec(self.round_keys[7].into());
-                let acc = acc.dec(self.round_keys[8].into());
-                let acc = acc.dec(self.round_keys[9].into());
-                let acc = acc.dec(self.round_keys[10].into());
-                let acc = acc.dec(self.round_keys[11].into());
-                acc.dec_last(self.round_keys[12].into())
-            }
-        }
-
-        impl AesEncrypt<32> for Aes256Enc {
-            type Decrypter = Aes256Dec;
-
-            fn decrypter(&self) -> Self::Decrypter {
-                Aes256Dec { round_keys: decryption_round_keys(&self.round_keys) }
-            }
-
-            #[inline]
-            fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                let acc = plaintext ^ self.round_keys[0];
-                let acc = acc.enc(self.round_keys[1]);
-                let acc = acc.enc(self.round_keys[2]);
-                let acc = acc.enc(self.round_keys[3]);
-                let acc = acc.enc(self.round_keys[4]);
-                let acc = acc.enc(self.round_keys[5]);
-                let acc = acc.enc(self.round_keys[6]);
-                let acc = acc.enc(self.round_keys[7]);
-                let acc = acc.enc(self.round_keys[8]);
-                let acc = acc.enc(self.round_keys[9]);
-                let acc = acc.enc(self.round_keys[10]);
-                let acc = acc.enc(self.round_keys[11]);
-                let acc = acc.enc(self.round_keys[12]);
-                let acc = acc.enc(self.round_keys[13]);
-                acc.enc_last(self.round_keys[14])
-            }
-
-            #[inline]
-            fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
-                let acc = plaintext ^ self.round_keys[0].into();
-                let acc = acc.enc(self.round_keys[1].into());
-                let acc = acc.enc(self.round_keys[2].into());
-                let acc = acc.enc(self.round_keys[3].into());
-                let acc = acc.enc(self.round_keys[4].into());
-                let acc = acc.enc(self.round_keys[5].into());
-                let acc = acc.enc(self.round_keys[6].into());
-                let acc = acc.enc(self.round_keys[7].into());
-                let acc = acc.enc(self.round_keys[8].into());
-                let acc = acc.enc(self.round_keys[9].into());
-                let acc = acc.enc(self.round_keys[10].into());
-                let acc = acc.enc(self.round_keys[11].into());
-                let acc = acc.enc(self.round_keys[12].into());
-                let acc = acc.enc(self.round_keys[13].into());
-                acc.enc_last(self.round_keys[14].into())
-            }
-
-            #[inline]
-            fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
-                let acc = plaintext ^ self.round_keys[0].into();
-                let acc = acc.enc(self.round_keys[1].into());
-                let acc = acc.enc(self.round_keys[2].into());
-                let acc = acc.enc(self.round_keys[3].into());
-                let acc = acc.enc(self.round_keys[4].into());
-                let acc = acc.enc(self.round_keys[5].into());
-                let acc = acc.enc(self.round_keys[6].into());
-                let acc = acc.enc(self.round_keys[7].into());
-                let acc = acc.enc(self.round_keys[8].into());
-                let acc = acc.enc(self.round_keys[9].into());
-                let acc = acc.enc(self.round_keys[10].into());
-                let acc = acc.enc(self.round_keys[11].into());
-                let acc = acc.enc(self.round_keys[12].into());
-                let acc = acc.enc(self.round_keys[13].into());
-                acc.enc_last(self.round_keys[14].into())
-            }
-        }
-
-        impl AesDecrypt<32> for Aes256Dec {
-            #[inline]
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                let acc = ciphertext ^ self.round_keys[0];
-                let acc = acc.dec(self.round_keys[1]);
-                let acc = acc.dec(self.round_keys[2]);
-                let acc = acc.dec(self.round_keys[3]);
-                let acc = acc.dec(self.round_keys[4]);
-                let acc = acc.dec(self.round_keys[5]);
-                let acc = acc.dec(self.round_keys[6]);
-                let acc = acc.dec(self.round_keys[7]);
-                let acc = acc.dec(self.round_keys[8]);
-                let acc = acc.dec(self.round_keys[9]);
-                let acc = acc.dec(self.round_keys[10]);
-                let acc = acc.dec(self.round_keys[11]);
-                let acc = acc.dec(self.round_keys[12]);
-                let acc = acc.dec(self.round_keys[13]);
-                acc.dec_last(self.round_keys[14])
-            }
-
-            #[inline]
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let acc = ciphertext ^ self.round_keys[0].into();
-                let acc = acc.dec(self.round_keys[1].into());
-                let acc = acc.dec(self.round_keys[2].into());
-                let acc = acc.dec(self.round_keys[3].into());
-                let acc = acc.dec(self.round_keys[4].into());
-                let acc = acc.dec(self.round_keys[5].into());
-                let acc = acc.dec(self.round_keys[6].into());
-                let acc = acc.dec(self.round_keys[7].into());
-                let acc = acc.dec(self.round_keys[8].into());
-                let acc = acc.dec(self.round_keys[9].into());
-                let acc = acc.dec(self.round_keys[10].into());
-                let acc = acc.dec(self.round_keys[11].into());
-                let acc = acc.dec(self.round_keys[12].into());
-                let acc = acc.dec(self.round_keys[13].into());
-                acc.dec_last(self.round_keys[14].into())
-            }
-
-            #[inline]
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let acc = ciphertext ^ self.round_keys[0].into();
-                let acc = acc.dec(self.round_keys[1].into());
-                let acc = acc.dec(self.round_keys[2].into());
-                let acc = acc.dec(self.round_keys[3].into());
-                let acc = acc.dec(self.round_keys[4].into());
-                let acc = acc.dec(self.round_keys[5].into());
-                let acc = acc.dec(self.round_keys[6].into());
-                let acc = acc.dec(self.round_keys[7].into());
-                let acc = acc.dec(self.round_keys[8].into());
-                let acc = acc.dec(self.round_keys[9].into());
-                let acc = acc.dec(self.round_keys[10].into());
-                let acc = acc.dec(self.round_keys[11].into());
-                let acc = acc.dec(self.round_keys[12].into());
-                let acc = acc.dec(self.round_keys[13].into());
-                acc.dec_last(self.round_keys[14].into())
-            }
-        }
+    #[inline]
+    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
+        impl_aes!(dec: self.round_keys, ciphertext, 14)
     }
 }

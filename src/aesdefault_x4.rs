@@ -153,8 +153,8 @@ impl AesBlockX4 {
 
     #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
     #[inline(always)]
-    pub(crate) fn pre_enc(self, round_key: Self) -> Self {
-        Self(self.0.pre_enc(round_key.0), self.1.pre_enc(round_key.1))
+    pub(crate) fn aese(self, round_key: Self) -> Self {
+        Self(self.0.aese(round_key.0), self.1.aese(round_key.1))
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
@@ -165,8 +165,8 @@ impl AesBlockX4 {
 
     #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
     #[inline(always)]
-    pub(crate) fn pre_dec(self, round_key: Self) -> Self {
-        Self(self.0.pre_dec(round_key.0), self.1.pre_dec(round_key.1))
+    pub(crate) fn aesd(self, round_key: Self) -> Self {
+        Self(self.0.aesd(round_key.0), self.1.aesd(round_key.1))
     }
 
     /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
@@ -185,5 +185,17 @@ impl AesBlockX4 {
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(self.0.dec_last(round_key.0), self.1.dec_last(round_key.1))
+    }
+
+    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
+    #[inline(always)]
+    pub(crate) fn mc(self) -> Self {
+        Self(self.0.mc(), self.1.mc())
+    }
+
+    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
+    #[inline(always)]
+    pub(crate) fn imc(self) -> Self {
+        Self(self.0.imc(), self.1.imc())
     }
 }

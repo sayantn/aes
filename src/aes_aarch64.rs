@@ -1,4 +1,3 @@
-use crate::*;
 use cfg_if::cfg_if;
 use std::arch::aarch64::*;
 use std::mem;
@@ -156,37 +155,37 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub(crate) fn pre_enc(self, round_key: Self) -> Self {
-        Self(unsafe { vaeseq_u8(self.0, round_key.0) }).mc()
+    pub(crate) fn aese(self, round_key: Self) -> Self {
+        Self(unsafe { vaeseq_u8(self.0, round_key.0) })
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
-        self.pre_enc(Self::zero()) ^ round_key
+        self.aese(Self::zero()).mc() ^ round_key
     }
 
     #[inline(always)]
-    pub(crate) fn pre_dec(self, round_key: Self) -> Self {
-        Self(unsafe { vaesdq_u8(self.0, round_key.0) }).imc()
+    pub(crate) fn aesd(self, round_key: Self) -> Self {
+        Self(unsafe { vaesdq_u8(self.0, round_key.0) })
     }
 
     /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
-        self.pre_dec(Self::zero()) ^ round_key
+        self.aesd(Self::zero()).imc() ^ round_key
     }
 
     /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
-        Self(unsafe { vaeseq_u8(self.0, Self::zero().0) }) ^ round_key
+        self.aese(Self::zero()) ^ round_key
     }
 
     /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
-        Self(unsafe { vaesdq_u8(self.0, Self::zero().0) }) ^ round_key
+        self.aesd(Self::zero()) ^ round_key
     }
 
     /// Performs the MixColumns operation
