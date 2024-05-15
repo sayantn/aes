@@ -101,18 +101,11 @@ cfg_if! {
 mod tests;
 
 #[inline(always)]
-fn slice_as_array<const N: usize>(value: &[u8]) -> Result<[u8; N], usize> {
+fn try_from_slice<const N: usize, T: From<[u8; N]>>(value: &[u8]) -> Result<T, usize> {
     if value.len() >= N {
-        Ok(unsafe { *(value.as_ptr() as *const _) })
+        Ok(unsafe { (*(value.as_ptr() as *const [u8; N])).into() })
     } else {
         Err(value.len())
-    }
-}
-
-impl AesBlock {
-    #[inline]
-    pub const fn new(value: [u8; 16]) -> Self {
-        unsafe { std::mem::transmute(value) }
     }
 }
 
@@ -135,7 +128,7 @@ impl TryFrom<&[u8]> for AesBlock {
 
     #[inline]
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        slice_as_array::<16>(value).map(AesBlock::from)
+        try_from_slice(value)
     }
 }
 
@@ -214,13 +207,6 @@ impl UpperHex for AesBlock {
     }
 }
 
-impl AesBlockX2 {
-    #[inline]
-    pub const fn new(value: [u8; 32]) -> Self {
-        unsafe { std::mem::transmute(value) }
-    }
-}
-
 impl Default for AesBlockX2 {
     #[inline]
     fn default() -> Self {
@@ -240,7 +226,7 @@ impl TryFrom<&[u8]> for AesBlockX2 {
 
     #[inline]
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        slice_as_array::<32>(value).map(AesBlockX2::from)
+        try_from_slice(value)
     }
 }
 
@@ -256,13 +242,6 @@ impl From<AesBlockX2> for [u8; 32] {
 impl Debug for AesBlockX2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         <(AesBlock, AesBlock)>::from(*self).fmt(f)
-    }
-}
-
-impl AesBlockX4 {
-    #[inline]
-    pub const fn new(value: [u8; 64]) -> Self {
-        unsafe { std::mem::transmute(value) }
     }
 }
 
@@ -285,7 +264,7 @@ impl TryFrom<&[u8]> for AesBlockX4 {
 
     #[inline]
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        slice_as_array::<64>(value).map(AesBlockX4::from)
+        try_from_slice(value)
     }
 }
 
@@ -308,8 +287,10 @@ mod private {
     pub trait Sealed {}
 }
 
-pub trait AesEncrypt<const KEY_LEN: usize>: From<[u8; KEY_LEN]> + private::Sealed {
-    type Decrypter: AesDecrypt<KEY_LEN>;
+pub trait AesEncrypt<const KEY_LEN: usize>:
+    From<[u8; KEY_LEN]> + private::Sealed + Debug + Clone
+{
+    type Decrypter: AesDecrypt<KEY_LEN, Encrypter = Self>;
 
     fn decrypter(&self) -> Self::Decrypter;
 
@@ -320,7 +301,13 @@ pub trait AesEncrypt<const KEY_LEN: usize>: From<[u8; KEY_LEN]> + private::Seale
     fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4;
 }
 
-pub trait AesDecrypt<const KEY_LEN: usize>: From<[u8; KEY_LEN]> + private::Sealed {
+pub trait AesDecrypt<const KEY_LEN: usize>:
+    From<[u8; KEY_LEN]> + private::Sealed + Debug + Clone
+{
+    type Encrypter: AesEncrypt<KEY_LEN, Decrypter = Self>;
+
+    fn encrypter(&self) -> Self::Encrypter;
+
     fn decrypt_block(&self, plaintext: AesBlock) -> AesBlock;
 
     fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2;
@@ -413,14 +400,25 @@ impl From<[u8; 32]> for Aes256Dec {
 }
 
 #[inline(always)]
-fn decryption_round_keys<const N: usize>(round_keys: &[AesBlock; N]) -> [AesBlock; N] {
+fn dec_round_keys<const N: usize>(enc_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
     let mut drk = [AesBlock::zero(); N];
-    drk[0] = round_keys[N - 1];
+    drk[0] = enc_round_keys[N - 1];
     for i in 1..(N - 1) {
-        drk[i] = round_keys[N - 1 - i].imc();
+        drk[i] = enc_round_keys[N - 1 - i].imc();
     }
-    drk[N - 1] = round_keys[0];
+    drk[N - 1] = enc_round_keys[0];
     drk
+}
+
+#[inline(always)]
+fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
+    let mut rk = [AesBlock::zero(); N];
+    rk[0] = dec_round_keys[N - 1];
+    for i in 1..(N - 1) {
+        rk[i] = dec_round_keys[N - 1 - i].mc();
+    }
+    rk[N - 1] = dec_round_keys[0];
+    rk
 }
 
 cfg_if! {
@@ -469,7 +467,7 @@ impl AesEncrypt<16> for Aes128Enc {
 
     fn decrypter(&self) -> Self::Decrypter {
         Aes128Dec {
-            round_keys: decryption_round_keys(&self.round_keys),
+            round_keys: dec_round_keys(&self.round_keys),
         }
     }
 
@@ -490,6 +488,14 @@ impl AesEncrypt<16> for Aes128Enc {
 }
 
 impl AesDecrypt<16> for Aes128Dec {
+    type Encrypter = Aes128Enc;
+
+    fn encrypter(&self) -> Self::Encrypter {
+        Aes128Enc {
+            round_keys: enc_round_keys(&self.round_keys),
+        }
+    }
+
     #[inline]
     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
         impl_aes!(dec: self.round_keys, ciphertext, 10)
@@ -511,7 +517,7 @@ impl AesEncrypt<24> for Aes192Enc {
 
     fn decrypter(&self) -> Self::Decrypter {
         Aes192Dec {
-            round_keys: decryption_round_keys(&self.round_keys),
+            round_keys: dec_round_keys(&self.round_keys),
         }
     }
 
@@ -532,6 +538,14 @@ impl AesEncrypt<24> for Aes192Enc {
 }
 
 impl AesDecrypt<24> for Aes192Dec {
+    type Encrypter = Aes192Enc;
+
+    fn encrypter(&self) -> Self::Encrypter {
+        Aes192Enc {
+            round_keys: enc_round_keys(&self.round_keys),
+        }
+    }
+
     #[inline]
     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
         impl_aes!(dec: self.round_keys, ciphertext, 12)
@@ -553,7 +567,7 @@ impl AesEncrypt<32> for Aes256Enc {
 
     fn decrypter(&self) -> Self::Decrypter {
         Aes256Dec {
-            round_keys: decryption_round_keys(&self.round_keys),
+            round_keys: dec_round_keys(&self.round_keys),
         }
     }
 
@@ -574,6 +588,14 @@ impl AesEncrypt<32> for Aes256Enc {
 }
 
 impl AesDecrypt<32> for Aes256Dec {
+    type Encrypter = Aes256Enc;
+
+    fn encrypter(&self) -> Self::Encrypter {
+        Aes256Enc {
+            round_keys: enc_round_keys(&self.round_keys),
+        }
+    }
+
     #[inline]
     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
         impl_aes!(dec: self.round_keys, ciphertext, 14)

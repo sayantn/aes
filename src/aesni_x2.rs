@@ -111,6 +111,11 @@ impl Not for AesBlockX2 {
 
 impl AesBlockX2 {
     #[inline]
+    pub const fn new(value: [u8; 32]) -> Self {
+        unsafe { std::mem::transmute(value) }
+    }
+    
+    #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 32);
         unsafe { _mm256_storeu_si256(dst.as_mut_ptr().cast(), self.0) };
@@ -124,22 +129,6 @@ impl AesBlockX2 {
     #[inline]
     pub fn is_zero(self) -> bool {
         unsafe { _mm256_testz_si256(self.0, self.0) == 1 }
-    }
-
-    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
-    #[inline]
-    pub fn shr<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        // this is NOT a mistake. Intel CPUs are Little-Endian
-        Self(unsafe { _mm256_bslli_epi128::<N>(self.0) })
-    }
-
-    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
-    #[inline]
-    pub fn shl<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        // this is NOT a mistake. Intel CPUs are Little-Endian
-        Self(unsafe { _mm256_bsrli_epi128::<N>(self.0) })
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)

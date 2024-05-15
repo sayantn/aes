@@ -13,6 +13,17 @@ lazy_static! {
 }
 
 #[test]
+fn aesenc_test() {
+    let block = AesBlock::from(0x000102030405060708090a0b0c0d0e0f);
+    let rk = AesBlock::from(0x101112131415161718191a1b1c1d1e1f);
+    let enc = AesBlock::from(0x7a7b4e5638782546a8c0477a3b813f43);
+
+    assert_eq!(block.enc(rk), enc);
+    // Mixcolumns does not commute with shiftrows, and addroundkey doesn't commute with subbytes
+    assert_eq!((enc ^ rk).imc().dec_last(AesBlock::zero()), block);
+}
+
+#[test]
 fn expansion_of_128_bit_key() {
     let expanded = keygen_128(*AES_128_KEY);
     assert_eq!(expanded[0], 0x2b7e151628aed2a6abf7158809cf4f3c_u128.into());

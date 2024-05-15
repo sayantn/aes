@@ -1,10 +1,9 @@
-use cfg_if::cfg_if;
 use std::arch::aarch64::*;
 use std::mem;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Copy, Clone)]
-#[repr(align(16))]
+#[repr(transparent)]
 pub struct AesBlock(uint8x16_t);
 
 impl PartialEq for AesBlock {
@@ -85,6 +84,12 @@ impl Not for AesBlock {
 
 impl AesBlock {
     #[inline]
+    pub const fn new(value: [u8; 16]) -> Self {
+        // using transmute in simd is safe
+        unsafe { std::mem::transmute(value) }
+    }
+
+    #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 16);
         unsafe { vst1q_u8(dst.as_mut_ptr(), self.0) };
@@ -100,57 +105,6 @@ impl AesBlock {
         unsafe {
             let result = vceqzq_u64(vreinterpretq_u64_u8(self.0));
             vgetq_lane_u64::<0>(result) != 0 && vgetq_lane_u64::<1>(result) != 0
-        }
-    }
-
-    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
-    ///
-    ///
-    /// ```
-    /// # use aes_crypto::AesBlock;
-    ///
-    /// let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    ///
-    /// let  aes_block = AesBlock::from(array).shr::<2>();
-    /// let  integer = u128::from_be_bytes(array) >> 16;
-    ///
-    /// assert_eq!(<[u8;16]>::from(aes_block), integer.to_be_bytes());
-    /// assert_eq!(integer, 0x0000000102030405060708090a0b0c0d);
-    /// ```
-    #[inline]
-    pub fn shr<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        cfg_if! {
-            if #[cfg(target_endian = "little")] {
-                (u128::from_le_bytes(self.into()) << 8 * N).to_le_bytes().into()
-            } else {
-                (u128::from_be_bytes(self.into()) >> 8 * N).to_be_bytes().into()
-            }
-        }
-    }
-
-    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
-    ///
-    /// ```
-    /// # use aes_crypto::AesBlock;
-    ///
-    /// let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    ///
-    /// let  aes_block = AesBlock::from(array).shl::<2>();
-    /// let  integer = u128::from_be_bytes(array) << 16;
-    ///
-    /// assert_eq!(<[u8;16]>::from(aes_block), integer.to_be_bytes());
-    /// assert_eq!(integer, 0x02030405060708090a0b0c0d0e0f0000);
-    /// ```
-    #[inline]
-    pub fn shl<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        cfg_if! {
-            if #[cfg(target_endian = "little")] {
-                (u128::from_le_bytes(self.into()) >> 8 * N).to_le_bytes().into()
-            } else {
-                (u128::from_be_bytes(self.into()) << 8 * N).to_be_bytes().into()
-            }
         }
     }
 

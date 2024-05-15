@@ -84,6 +84,12 @@ impl Not for AesBlock {
 
 impl AesBlock {
     #[inline]
+    pub const fn new(value: [u8; 16]) -> Self {
+        // using transmute in simd is safe
+        unsafe { std::mem::transmute(value) }
+    }
+
+    #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 16);
         unsafe { _mm_storeu_si128(dst.as_mut_ptr().cast(), self.0) };
@@ -97,46 +103,6 @@ impl AesBlock {
     #[inline]
     pub fn is_zero(self) -> bool {
         unsafe { _mm_testz_si128(self.0, self.0) == 1 }
-    }
-
-    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
-    ///
-    /// ```
-    /// # use aes_crypto::AesBlock;
-    ///
-    /// let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    ///
-    /// let  aes_block = AesBlock::from(array).shr::<2>();
-    /// let  integer = u128::from_be_bytes(array) >> 16;
-    ///
-    /// assert_eq!(<[u8;16]>::from(aes_block), integer.to_be_bytes());
-    /// assert_eq!(integer, 0x0000000102030405060708090a0b0c0d);
-    /// ```
-    #[inline]
-    pub fn shr<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        // this is NOT a mistake. Intel CPUs are Little-Endian
-        Self(unsafe { _mm_bslli_si128::<N>(self.0) })
-    }
-
-    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
-    ///
-    /// ```
-    /// # use aes_crypto::AesBlock;
-    ///
-    ///let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    ///
-    /// let  aes_block = AesBlock::from(array).shl::<2>();
-    /// let  integer = u128::from_be_bytes(array) << 16;
-    ///
-    /// assert_eq!(<[u8;16]>::from(aes_block), integer.to_be_bytes());
-    /// assert_eq!(integer, 0x02030405060708090a0b0c0d0e0f0000);
-    /// ```
-    #[inline]
-    pub fn shl<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        // this is NOT a mistake. Intel CPUs are Little-Endian
-        Self(unsafe { _mm_bsrli_si128::<N>(self.0) })
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)

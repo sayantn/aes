@@ -179,6 +179,11 @@ impl Not for AesBlockX4 {
 
 impl AesBlockX4 {
     #[inline]
+    pub const fn new(value: [u8; 32]) -> Self {
+        unsafe { std::mem::transmute(value) }
+    }
+
+    #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 64);
         unsafe { _mm512_storeu_si512(dst.as_mut_ptr().cast(), self.0) };
@@ -192,46 +197,6 @@ impl AesBlockX4 {
     #[inline]
     pub fn is_zero(self) -> bool {
         unsafe { _mm512_test_epi64_mask(self.0, self.0) == 0 }
-    }
-
-    /// Shifts the AES block by [N] bytes to the right. [N] must be non-negative
-    #[inline]
-    pub fn shr<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        cfg_if! {
-            if #[cfg(target_feature = "avx512bw")] {
-                Self(unsafe { _mm512_bslli_epi128::<N>(self.0) })
-            } else {
-                unsafe{
-                    let a = _mm512_extracti64x4_epi64::<0>(self.0);
-                    let b = _mm512_extracti64x4_epi64::<1>(self.0);
-
-                    let (c, d) = (_mm256_bslli_epi128::<N>(a), _mm256_bslli_epi128::<N>(b));
-
-                    Self(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(c), d))
-                }
-            }
-        }
-    }
-
-    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
-    #[inline]
-    pub fn shl<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        cfg_if! {
-            if #[cfg(target_feature = "avx512bw")] {
-                Self(unsafe { _mm512_bsrli_epi128::<N>(self.0) })
-            } else {
-                unsafe{
-                    let a = _mm512_extracti64x4_epi64::<0>(self.0);
-                    let b = _mm512_extracti64x4_epi64::<1>(self.0);
-
-                    let (c, d) = (_mm256_bsrli_epi128::<N>(a), _mm256_bsrli_epi128::<N>(b));
-
-                    Self(_mm512_inserti64x4::<1>(_mm512_castsi256_si512(c), d))
-                }
-            }
-        }
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)

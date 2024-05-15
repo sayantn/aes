@@ -2,16 +2,13 @@ use crate::{AesBlock, AesBlockX2};
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-#[repr(align(32))]
+#[repr(C, align(32))]
 pub struct AesBlockX4(AesBlockX2, AesBlockX2);
 
 impl From<[u8; 64]> for AesBlockX4 {
     #[inline]
     fn from(value: [u8; 64]) -> Self {
-        Self(
-            AesBlockX2::try_from(&value[..32]).unwrap(),
-            AesBlockX2::try_from(&value[32..]).unwrap(),
-        )
+        Self::new(value)
     }
 }
 
@@ -121,6 +118,14 @@ impl Not for AesBlockX4 {
 
 impl AesBlockX4 {
     #[inline]
+    pub const fn new(value: [u8; 64]) -> Self {
+        Self(
+            AesBlockX2::new(unsafe { *(value.as_ptr() as *const _) }),
+            AesBlockX2::new(unsafe { *(value.as_ptr().add(32) as *const _) }),
+        )
+    }
+
+    #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 64);
         self.0.store_to(&mut dst[..32]);
@@ -135,20 +140,6 @@ impl AesBlockX4 {
     #[inline]
     pub fn is_zero(self) -> bool {
         self.0.is_zero() & self.1.is_zero()
-    }
-
-    /// Shifts the AES blocks by `N` bytes to the right. `N` must be non-negative
-    #[inline]
-    pub fn shr<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        Self(self.0.shr::<N>(), self.1.shr::<N>())
-    }
-
-    /// Shifts the AES blocks by `N` bytes to the left. `N` must be non-negative
-    #[inline]
-    pub fn shl<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        Self(self.0.shl::<N>(), self.1.shl::<N>())
     }
 
     #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]

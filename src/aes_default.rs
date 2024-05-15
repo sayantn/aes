@@ -5,11 +5,11 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, N
 pub struct AesBlock(u32, u32, u32, u32);
 
 #[inline(always)]
-fn load_u32_be(slice: &[u8]) -> u32 {
-    ((slice[0] as u32) << 24)
-        | ((slice[1] as u32) << 16)
-        | ((slice[2] as u32) << 8)
-        | (slice[3] as u32)
+const fn load_u32_be(slice: &[u8], offset: usize) -> u32 {
+    ((slice[offset + 0] as u32) << 24)
+        | ((slice[offset + 1] as u32) << 16)
+        | ((slice[offset + 2] as u32) << 8)
+        | (slice[offset + 3] as u32)
 }
 
 #[inline(always)]
@@ -23,12 +23,7 @@ fn store_u32_be(slice: &mut [u8], num: u32) {
 impl From<[u8; 16]> for AesBlock {
     #[inline]
     fn from(value: [u8; 16]) -> Self {
-        Self(
-            load_u32_be(&value[..]),
-            load_u32_be(&value[4..]),
-            load_u32_be(&value[8..]),
-            load_u32_be(&value[12..]),
-        )
+        Self::new(value)
     }
 }
 
@@ -115,6 +110,16 @@ impl Not for AesBlock {
 
 impl AesBlock {
     #[inline]
+    pub const fn new(value: [u8; 16]) -> Self {
+        Self(
+            load_u32_be(&value, 0),
+            load_u32_be(&value, 4),
+            load_u32_be(&value, 8),
+            load_u32_be(&value, 12),
+        )
+    }
+
+    #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 16);
         store_u32_be(dst, self.0);
@@ -131,98 +136,6 @@ impl AesBlock {
     #[inline]
     pub fn is_zero(self) -> bool {
         (self.0 | self.1 | self.2 | self.3) == 0
-    }
-
-    /// Shifts the AES block by `N` bytes to the right. `N` must be non-negative
-    ///
-    /// ```
-    /// # use aes_crypto::AesBlock;
-    ///
-    /// let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    ///
-    /// let  aes_block = AesBlock::from(array).shr::<2>();
-    /// let  integer = u128::from_be_bytes(array) >> 16;
-    ///
-    /// assert_eq!(<[u8;16]>::from(aes_block), integer.to_be_bytes());
-    /// assert_eq!(integer, 0x0000000102030405060708090a0b0c0d);
-    /// ```
-    #[inline]
-    pub fn shr<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        let shift = (8 * N) & 31;
-        let counter = 32 - shift;
-        match N as u32 {
-            0 => self,
-            1..=3 => Self(
-                self.0 >> shift,
-                (self.1 >> shift) | (self.0 << counter),
-                (self.2 >> shift) | (self.1 << counter),
-                (self.3 >> shift) | (self.2 << counter),
-            ),
-            4 => Self(0, self.0, self.1, self.2),
-            5..=7 => Self(
-                0,
-                self.0 >> shift,
-                (self.1 >> shift) | (self.0 << counter),
-                (self.2 >> shift) | (self.1 << counter),
-            ),
-            8 => Self(0, 0, self.0, self.1),
-            9..=11 => Self(
-                0,
-                0,
-                self.0 >> shift,
-                (self.1 >> shift) | (self.0 << counter),
-            ),
-            12 => Self(0, 0, 0, self.0),
-            13..=15 => Self(0, 0, 0, self.0 >> shift),
-            16.. => Self(0, 0, 0, 0),
-        }
-    }
-
-    /// Shifts the AES block by `N` bytes to the left. `N` must be non-negative
-    ///
-    /// ```
-    /// # use aes_crypto::AesBlock;
-    ///
-    ///let array:[u8;16] = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    ///
-    /// let  aes_block = AesBlock::from(array).shl::<2>();
-    /// let  integer = u128::from_be_bytes(array) << 16;
-    ///
-    /// assert_eq!(<[u8;16]>::from(aes_block), integer.to_be_bytes());
-    /// assert_eq!(integer, 0x02030405060708090a0b0c0d0e0f0000);
-    /// ```
-    #[inline]
-    pub fn shl<const N: i32>(self) -> Self {
-        assert!(N >= 0);
-        let shift = (8 * N) & 31;
-        let counter = 32 - shift;
-        match N as u32 {
-            0 => self,
-            1..=3 => Self(
-                (self.0 << shift) | (self.1 >> counter),
-                (self.1 << shift) | (self.2 >> counter),
-                (self.2 << shift) | (self.3 >> counter),
-                self.3 << shift,
-            ),
-            4 => Self(0, self.0, self.1, self.2),
-            5..=7 => Self(
-                (self.1 << shift) | (self.2 >> counter),
-                (self.2 << shift) | (self.3 >> counter),
-                self.3 << shift,
-                0,
-            ),
-            8 => Self(0, 0, self.0, self.1),
-            9..=11 => Self(
-                (self.2 << shift) | (self.3 >> counter),
-                self.3 << shift,
-                0,
-                0,
-            ),
-            12 => Self(0, 0, 0, self.0),
-            13..=15 => Self(self.3 << shift, 0, 0, 0),
-            16.. => Self(0, 0, 0, 0),
-        }
     }
 
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
@@ -304,21 +217,47 @@ impl AesBlock {
     /// Performs the MixColumns operation
     #[inline]
     pub fn mc(self) -> Self {
-        #[inline(always)]
-        fn _mc(x: u32) -> u32 {
-            te0(td4_3(x >> 24)) ^ te1(td4_3(x >> 16)) ^ te2(td4_3(x >> 8)) ^ te3(td4_3(x))
-        }
-        Self(_mc(self.0), _mc(self.1), _mc(self.2), _mc(self.3))
+        Self(
+            te0(td4_3(self.0 >> 24))
+                ^ te1(td4_3(self.0 >> 16))
+                ^ te2(td4_3(self.0 >> 8))
+                ^ te3(td4_3(self.0)),
+            te0(td4_3(self.1 >> 24))
+                ^ te1(td4_3(self.1 >> 16))
+                ^ te2(td4_3(self.1 >> 8))
+                ^ te3(td4_3(self.1)),
+            te0(td4_3(self.2 >> 24))
+                ^ te1(td4_3(self.2 >> 16))
+                ^ te2(td4_3(self.2 >> 8))
+                ^ te3(td4_3(self.2)),
+            te0(td4_3(self.3 >> 24))
+                ^ te1(td4_3(self.3 >> 16))
+                ^ te2(td4_3(self.3 >> 8))
+                ^ te3(td4_3(self.3)),
+        )
     }
 
     /// Performs the InvMixColumns operation
     #[inline]
     pub fn imc(self) -> Self {
-        #[inline(always)]
-        fn _imc(x: u32) -> u32 {
-            td0(te4_3(x >> 24)) ^ td1(te4_3(x >> 16)) ^ td2(te4_3(x >> 8)) ^ td3(te4_3(x))
-        }
-        Self(_imc(self.0), _imc(self.1), _imc(self.2), _imc(self.3))
+        Self(
+            td0(te4_3(self.0 >> 24))
+                ^ td1(te4_3(self.0 >> 16))
+                ^ td2(te4_3(self.0 >> 8))
+                ^ td3(te4_3(self.0)),
+            td0(te4_3(self.1 >> 24))
+                ^ td1(te4_3(self.1 >> 16))
+                ^ td2(te4_3(self.1 >> 8))
+                ^ td3(te4_3(self.1)),
+            td0(te4_3(self.2 >> 24))
+                ^ td1(te4_3(self.2 >> 16))
+                ^ td2(te4_3(self.2 >> 8))
+                ^ td3(te4_3(self.2)),
+            td0(te4_3(self.3 >> 24))
+                ^ td1(te4_3(self.3 >> 16))
+                ^ td2(te4_3(self.3 >> 8))
+                ^ td3(te4_3(self.3)),
+        )
     }
 }
 
@@ -382,12 +321,12 @@ pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
 
 pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
     let k = [
-        load_u32_be(&key[..]),
-        load_u32_be(&key[4..]),
-        load_u32_be(&key[8..]),
-        load_u32_be(&key[12..]),
-        load_u32_be(&key[16..]),
-        load_u32_be(&key[20..]),
+        load_u32_be(&key, 0),
+        load_u32_be(&key, 4),
+        load_u32_be(&key, 8),
+        load_u32_be(&key, 12),
+        load_u32_be(&key, 16),
+        load_u32_be(&key, 20),
     ];
     let key0 = AesBlock(k[0], k[1], k[2], k[3]);
     let p = keyexp_192::<0x01000000>(k);

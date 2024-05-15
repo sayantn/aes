@@ -1,6 +1,6 @@
 [package]
 name = "aes_crypto"
-version = "0.2.3"
+version = "1.0.0"
 authors = ["Sayantan Chakraborty <schakraborty.student@gmail.com>"]
 edition = "2021"
 license = "MIT"
