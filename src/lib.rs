@@ -1,39 +1,7 @@
-//! This crate provides a platform-agnostic api for the [AES function](https://doi.org/10.6028/NIST.FIPS.197-upd1)
-//!
-//! All you have to do is compile it with correct `target_cpu` attributes, and this crate would
-//! guarantee that you are getting the best possible performance, while hiding from you the ugly
-//! details. For typical Rust applications, if you are not cross-compiling, you can just use
-//! `target-cpu=native` in the `RUSTFLAGS` environment variable.
-//!
-//! # Implementations (as of date) and requirements
-//!
-//!  -  `AES-NI (with Vector AES for 2- and 4-blocks)` => requires a Nightly compiler (for avx512),
-//!     enabling the `vaes` feature, and compiling for x86(64) with `avx512vl` and `vaes` target_features enabled.
-//!
-//!  -  `AES-NI (with Vector AES for 4-blocks)` => requires a Nightly compiler (for avx512),
-//!     enabling the `vaes` feature, and compiling for x86(64) with `avx512f` and `vaes` target_features enabled.
-//!
-//!  -  `AES-NI` => requires compiling for x86(64) with `sse4.1` and `aes` target_features enabled.
-//!
-//!  -  `AES-AArch64` => requires compiling for AArch64 with `aes` target_feature enabled.
-//!
-//!  -  `Software Implementation` (Fallback, using the reference implementation of AES as provided by
-//!     Rijmen and Daemen, available on [their website](https://web.archive.org/web/20050828204927/http://www.iaik.tu-graz.ac.at/research/krypto/AES/old/%7Erijmen/rijndael/) )
-//!
-//! It is important to remember that the target_cpu attribute sets all the available target_feature
-//! attributes, so you are guaranteed to get the best performance available in your target cpu.
-//!
-//! No matter which implementation is selected, all the functions are guaranteed to have exactly the same signature, with
-//! the exact same behaviour
-//!
-//! This crate also implements 2- and 4- block versions of normal AES functions, using [`AesBlockX2`]
-//! and [`AesBlockX4`]. These behave exactly as if you were doing the same operation on 2 (or 4)
-//! [`AesBlock`]s. These are provided to use hardware acceleration using x86(64)'s `VAES` instruction
-//! set or, in the future, ARM's `SVE2-AES` instructions.
-
+#![doc=include_str!("../README.md")]
 #![cfg_attr(
     all(
-        feature = "vaes",
+        feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
         any(target_feature = "avx512f", target_feature = "avx512vl"),
         target_feature = "vaes"
@@ -41,8 +9,9 @@
     feature(stdarch_x86_avx512)
 )]
 
-use cfg_if::cfg_if;
 use std::fmt::{Binary, Debug, Display, Formatter, LowerHex, UpperHex};
+
+use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(all(
@@ -69,7 +38,7 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(all(
-        feature = "vaes",
+        feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx512vl",
         target_feature = "vaes"
@@ -84,7 +53,7 @@ cfg_if! {
 
 cfg_if! {
     if #[cfg(all(
-        feature = "vaes",
+        feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "avx512f",
         target_feature = "vaes"
