@@ -1,4 +1,5 @@
-This is a pure-Rust platform-agnostic AES library, that is focused on reusability and optimal performance.
+This is a pure-Rust platform-agnostic [AES](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) library, that
+is focused on reusability and optimal performance.
 
 This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 5
 implementations, among which it automatically decides the best (most performant) using Cargo's `target_feature` flags.
@@ -22,8 +23,10 @@ the `RUSTFLAGS` environment variable, and use the `nightly` feature only if you 
 Using the wrong `target_feature` flags may lead to the binary crashing due to an "Unknown Instruction" error. This
 library uses these flags to use the CPU intrinsics to maximize performance. If you are unsure what `target_feature`s are
 supported on your CPU, use the command
+
 ````bash
     rustc --print cfg -C target-cpu=native
 ````
+
 Using the `nightly` feature when not using a nightly compiler can lead to compile failures, so use this only if you
 are using a nightly compiler.
