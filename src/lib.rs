@@ -43,6 +43,15 @@ cfg_if! {
         mod aes_arm;
         pub use aes_arm::AesBlock;
         use aes_arm::*;
+    } else if #[cfg(all(
+        feature = "nightly",
+        target_arch = "riscv64",
+        target_feature = "zkne",
+        target_feature = "zknd"
+    ))] {
+        mod aes_riscv64;
+        pub use aes_riscv64::AesBlock;
+        use aes_riscv64::*;
     } else {
         mod aes_default;
         pub use aes_default::AesBlock;
