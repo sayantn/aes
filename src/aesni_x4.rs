@@ -1,12 +1,13 @@
 #[cfg(target_arch = "x86")]
-use std::arch::x86::*;
+use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::arch::x86_64::*;
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 use cfg_if::cfg_if;
 
 use crate::aes_x86::AesBlock;
+use crate::aesni_x2::AesBlockX2;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -61,62 +62,28 @@ impl From<AesBlockX4> for (AesBlock, AesBlock, AesBlock, AesBlock) {
     }
 }
 
-cfg_if! {
-    if #[cfg(target_feature="avx512vl")] {
-        use crate::aesni_x2::AesBlockX2;
+impl From<(AesBlockX2, AesBlockX2)> for AesBlockX4 {
+    #[inline]
+    fn from(value: (AesBlockX2, AesBlockX2)) -> Self {
+        Self(unsafe { _mm512_inserti64x4::<1>(_mm512_castsi256_si512(value.0 .0), value.1 .0) })
+    }
+}
 
-        impl From<(AesBlockX2, AesBlockX2)> for AesBlockX4 {
-            #[inline]
-            fn from(value: (AesBlockX2, AesBlockX2)) -> Self {
-                Self(unsafe { _mm512_inserti64x4::<1>(_mm512_castsi256_si512(value.0.0), value.1.0) })
-            }
-        }
+impl From<AesBlockX2> for AesBlockX4 {
+    #[inline]
+    fn from(value: AesBlockX2) -> Self {
+        Self(unsafe { _mm512_broadcast_i64x4(value.0) })
+    }
+}
 
-        impl From<AesBlockX2> for AesBlockX4 {
-            #[inline]
-            fn from(value: AesBlockX2) -> Self {
-                Self(unsafe { _mm512_broadcast_i64x4(value.0) })
-            }
-        }
-
-        impl From<AesBlockX4> for (AesBlockX2, AesBlockX2) {
-            #[inline]
-            fn from(value: AesBlockX4) -> Self {
-                unsafe {
-                    (
-                        AesBlockX2(_mm512_extracti64x4_epi64::<0>(value.0)),
-                        AesBlockX2(_mm512_extracti64x4_epi64::<1>(value.0)),
-                    )
-                }
-            }
-        }
-    } else {
-        use crate::aesdefault_x2::AesBlockX2;
-
-        impl From<(AesBlockX2, AesBlockX2)> for AesBlockX4 {
-            #[inline]
-            fn from(value: (AesBlockX2, AesBlockX2)) -> Self {
-                let ((a, b), (c, d)) = (value.0.into(), value.1.into());
-                (a, b, c, d).into()
-            }
-        }
-
-        impl From<AesBlockX2> for AesBlockX4 {
-            #[inline]
-            fn from(value: AesBlockX2) -> Self {
-                let (a, b) = value.into();
-                unsafe {
-                    Self(_mm512_broadcast_i64x4(_mm256_inserti128_si256::<1>(_mm256_castsi128_si256(a.0), b.0)))
-                }
-            }
-        }
-
-        impl From<AesBlockX4> for (AesBlockX2, AesBlockX2){
-            #[inline]
-            fn from(value: AesBlockX4) -> Self {
-                let (a, b, c, d) = value.into();
-                ((a, b).into(), (c, d).into())
-            }
+impl From<AesBlockX4> for (AesBlockX2, AesBlockX2) {
+    #[inline]
+    fn from(value: AesBlockX4) -> Self {
+        unsafe {
+            (
+                AesBlockX2(_mm512_extracti64x4_epi64::<0>(value.0)),
+                AesBlockX2(_mm512_extracti64x4_epi64::<1>(value.0)),
+            )
         }
     }
 }
@@ -181,7 +148,7 @@ impl Not for AesBlockX4 {
 impl AesBlockX4 {
     #[inline]
     pub const fn new(value: [u8; 64]) -> Self {
-        unsafe { std::mem::transmute(value) }
+        unsafe { core::mem::transmute(value) }
     }
 
     #[inline]

@@ -1,15 +1,24 @@
-#![doc=include_str!("../README.md")]
+#![doc = include_str!("../README.md")]
+#![no_std]
 #![cfg_attr(
     all(
         feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
-        any(target_feature = "avx512f", target_feature = "avx512vl"),
         target_feature = "vaes"
     ),
     feature(stdarch_x86_avx512)
 )]
+#![cfg_attr(
+    all(
+        feature = "nightly",
+        target_arch = "arm",
+        target_feature = "v8",
+        target_feature = "aes"
+    ),
+    feature(stdarch_arm_neon_intrinsics)
+)]
 
-use std::fmt::{Binary, Debug, Display, Formatter, LowerHex, UpperHex};
+use core::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 
 use cfg_if::cfg_if;
 
@@ -23,12 +32,16 @@ cfg_if! {
         pub use aes_x86::AesBlock;
         use aes_x86::*;
     } else if #[cfg(all(
-        target_arch = "aarch64",
+        any(
+            target_arch = "aarch64",
+            target_arch = "arm64ec",
+            all(feature = "nightly", target_arch = "arm", target_feature = "v8")
+        ),
         target_feature = "aes"
     ))] {
-        mod aes_aarch64;
-        pub use aes_aarch64::AesBlock;
-        use aes_aarch64::*;
+        mod aes_arm;
+        pub use aes_arm::AesBlock;
+        use aes_arm::*;
     } else {
         mod aes_default;
         pub use aes_default::AesBlock;
@@ -40,7 +53,6 @@ cfg_if! {
     if #[cfg(all(
         feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx512vl",
         target_feature = "vaes"
     ))] {
         mod aesni_x2;
@@ -76,6 +88,12 @@ fn try_from_slice<const N: usize, T: From<[u8; N]>>(value: &[u8]) -> Result<T, u
     } else {
         Err(value.len())
     }
+}
+
+#[inline(always)]
+const fn array_from_slice<const N: usize>(value: &[u8], offset: usize) -> [u8; N] {
+    debug_assert!(value.len() - offset >= N);
+    unsafe { *(value.as_ptr().add(offset) as *const [u8; N]) }
 }
 
 impl Default for AesBlock {
@@ -125,13 +143,13 @@ impl From<AesBlock> for u128 {
 }
 
 impl Debug for AesBlock {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(self, f)
     }
 }
 
 impl Display for AesBlock {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             write!(f, "{self:X}")
         } else {
@@ -141,7 +159,7 @@ impl Display for AesBlock {
 }
 
 impl Binary for AesBlock {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             f.write_str("0b")?;
         }
@@ -153,7 +171,7 @@ impl Binary for AesBlock {
 }
 
 impl LowerHex for AesBlock {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             f.write_str("0x")?;
         }
@@ -165,7 +183,7 @@ impl LowerHex for AesBlock {
 }
 
 impl UpperHex for AesBlock {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             f.write_str("0X")?;
         }
@@ -209,7 +227,7 @@ impl From<AesBlockX2> for [u8; 32] {
 }
 
 impl Debug for AesBlockX2 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         <(AesBlock, AesBlock)>::from(*self).fmt(f)
     }
 }
@@ -247,7 +265,7 @@ impl From<AesBlockX4> for [u8; 64] {
 }
 
 impl Debug for AesBlockX4 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         <(AesBlock, AesBlock, AesBlock, AesBlock)>::from(*self).fmt(f)
     }
 }
@@ -392,42 +410,76 @@ fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; 
 
 cfg_if! {
 if #[cfg(all(
-    target_arch = "aarch64",
-    target_feature = "aes"
+        any(
+            target_arch = "aarch64",
+            target_arch = "arm64ec",
+            all(feature = "nightly", target_arch = "arm", target_feature = "v8")
+        ),
+        target_feature = "aes"
 ))] {
-    macro_rules! impl_aes {
-        (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
-            let mut acc = $plaintext;
-            for i in 0..($max - 1) {
-                acc = acc.aese($round_keys[i].into()).mc();
-            }
-            acc.aese($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
-        }};
-        (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
-            let mut acc = $ciphertext;
-            for i in 0..($max - 1) {
-                acc = acc.aesd($round_keys[i].into()).imc();
-            }
-            acc.aesd($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
-        }};
-    }
+        macro_rules! aes_intr {
+            ($($name:ident),*) => {$(
+                impl $name {
+                    fn aese(self, round_key:Self) -> Self {
+                        let (a, b) = self.into();
+                        let (rk0, rk1) = round_key.into();
+                        (a.aese(rk0), b.aese(rk1)).into()
+                    }
+
+                    fn aesd(self, round_key:Self) -> Self {
+                        let (a, b) = self.into();
+                        let (rk0, rk1) = round_key.into();
+                        (a.aesd(rk0), b.aesd(rk1)).into()
+                    }
+
+                    fn mc(self) -> Self {
+                        let (a, b) = self.into();
+                        (a.mc(), b.mc()).into()
+                    }
+
+                    fn imc(self) -> Self {
+                        let (a, b) = self.into();
+                        (a.imc(), b.imc()).into()
+                    }
+                }
+            )*};
+        }
+
+        aes_intr!(AesBlockX2, AesBlockX4);
+
+        macro_rules! impl_aes {
+            (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
+                let mut acc = $plaintext;
+                for i in 0..($max - 1) {
+                    acc = acc.aese($round_keys[i].into()).mc();
+                }
+                acc.aese($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
+            }};
+            (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
+                let mut acc = $ciphertext;
+                for i in 0..($max - 1) {
+                    acc = acc.aesd($round_keys[i].into()).imc();
+                }
+                acc.aesd($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
+            }};
+        }
 }else{
-    macro_rules! impl_aes {
-        (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
-            let mut acc = $plaintext ^ $round_keys[0].into();
-            for i in 1..$max {
-                acc = acc.enc($round_keys[i].into());
-            }
-            acc.enc_last($round_keys[$max].into())
-        }};
-        (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
-            let mut acc = $ciphertext ^ $round_keys[0].into();
-            for i in 1..$max {
-                acc = acc.dec($round_keys[i].into());
-            }
-            acc.dec_last($round_keys[$max].into())
-        }};
-    }
+        macro_rules! impl_aes {
+            (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
+                let mut acc = $plaintext ^ $round_keys[0].into();
+                for i in 1..$max {
+                    acc = acc.enc($round_keys[i].into());
+                }
+                acc.enc_last($round_keys[$max].into())
+            }};
+            (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
+                let mut acc = $ciphertext ^ $round_keys[0].into();
+                for i in 1..$max {
+                    acc = acc.dec($round_keys[i].into());
+                }
+                acc.dec_last($round_keys[$max].into())
+            }};
+        }
 }
 }
 

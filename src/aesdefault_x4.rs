@@ -1,5 +1,6 @@
-use crate::{AesBlock, AesBlockX2};
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+
+use crate::{array_from_slice, AesBlock, AesBlockX2};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C, align(32))]
@@ -120,8 +121,8 @@ impl AesBlockX4 {
     #[inline]
     pub const fn new(value: [u8; 64]) -> Self {
         Self(
-            AesBlockX2::new(unsafe { *(value.as_ptr() as *const _) }),
-            AesBlockX2::new(unsafe { *(value.as_ptr().add(32) as *const _) }),
+            AesBlockX2::new(array_from_slice(&value, 0)),
+            AesBlockX2::new(array_from_slice(&value, 32)),
         )
     }
 
@@ -142,22 +143,10 @@ impl AesBlockX4 {
         self.0.is_zero() & self.1.is_zero()
     }
 
-    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
-    #[inline(always)]
-    pub(crate) fn aese(self, round_key: Self) -> Self {
-        Self(self.0.aese(round_key.0), self.1.aese(round_key.1))
-    }
-
     /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(self.0.enc(round_key.0), self.1.enc(round_key.1))
-    }
-
-    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
-    #[inline(always)]
-    pub(crate) fn aesd(self, round_key: Self) -> Self {
-        Self(self.0.aesd(round_key.0), self.1.aesd(round_key.1))
     }
 
     /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
@@ -176,17 +165,5 @@ impl AesBlockX4 {
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(self.0.dec_last(round_key.0), self.1.dec_last(round_key.1))
-    }
-
-    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
-    #[inline(always)]
-    pub(crate) fn mc(self) -> Self {
-        Self(self.0.mc(), self.1.mc())
-    }
-
-    #[cfg(all(target_arch = "aarch64", target_feature = "aes"))]
-    #[inline(always)]
-    pub(crate) fn imc(self) -> Self {
-        Self(self.0.imc(), self.1.imc())
     }
 }

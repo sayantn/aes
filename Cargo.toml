@@ -1,13 +1,13 @@
 [package]
 name = "aes_crypto"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Sayantan Chakraborty <schakraborty.student@gmail.com>"]
 edition = "2021"
 license = "MIT"
 description = "A platform-agnostic library for the AES cipher (Rijndael)"
 repository = "https://github.com/sayantn/aes"
-keywords = ["crypto", "aes", "rijndael"]
-categories = ["cryptography"]
+keywords = ["crypto", "aes", "rijndael", "no_std"]
+categories = ["cryptography", "no-std", "no-std::no-alloc"]
 
 [features]
 # Enable this option when using a nightly compiler to possibly boost performance. DO NOT use when not using a nightly compiler

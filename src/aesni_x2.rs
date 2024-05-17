@@ -1,10 +1,10 @@
 #[cfg(target_arch = "x86")]
-use std::arch::x86::*;
+use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use core::arch::x86_64::*;
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 use crate::aes_x86::AesBlock;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -112,9 +112,9 @@ impl Not for AesBlockX2 {
 impl AesBlockX2 {
     #[inline]
     pub const fn new(value: [u8; 32]) -> Self {
-        unsafe { std::mem::transmute(value) }
+        unsafe { core::mem::transmute(value) }
     }
-    
+
     #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 32);

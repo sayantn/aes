@@ -1,6 +1,7 @@
-use crate::*;
 use hex::FromHex;
 use lazy_static::lazy_static;
+
+use crate::*;
 
 lazy_static! {
     static ref AES_128_KEY: [u8; 16] =

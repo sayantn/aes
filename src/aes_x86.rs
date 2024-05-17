@@ -1,9 +1,8 @@
 #[cfg(target_arch = "x86")]
-use std::arch::x86::*;
+use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::arch::x86_64::*;
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -86,7 +85,7 @@ impl AesBlock {
     #[inline]
     pub const fn new(value: [u8; 16]) -> Self {
         // using transmute in simd is safe
-        unsafe { std::mem::transmute(value) }
+        unsafe { core::mem::transmute(value) }
     }
 
     #[inline]

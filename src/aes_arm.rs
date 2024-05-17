@@ -1,6 +1,9 @@
-use std::arch::aarch64::*;
-use std::mem;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+#[cfg(not(target_arch = "arm"))]
+use core::arch::aarch64::*;
+#[cfg(target_arch = "arm")]
+use core::arch::arm::*;
+use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::{mem, slice};
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -10,8 +13,19 @@ impl PartialEq for AesBlock {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         unsafe {
-            let result = vceqq_u64(vreinterpretq_u64_u8(self.0), vreinterpretq_u64_u8(other.0));
-            vgetq_lane_u64::<0>(result) != 0 && vgetq_lane_u64::<1>(result) != 0
+            #[cfg(not(target_arch = "arm"))]
+            {
+                let result = vceqq_u64(vreinterpretq_u64_u8(self.0), vreinterpretq_u64_u8(other.0));
+                vgetq_lane_u64::<0>(result) != 0 && vgetq_lane_u64::<1>(result) != 0
+            }
+            #[cfg(target_arch = "arm")]
+            {
+                let result = vceqq_u32(vreinterpretq_u32_u8(self.0), vreinterpretq_u32_u8(other.0));
+                vgetq_lane_u32::<0>(result) != 0
+                    && vgetq_lane_u32::<1>(result) != 0
+                    && vgetq_lane_u32::<2>(result) != 0
+                    && vgetq_lane_u32::<3>(result) != 0
+            }
         }
     }
 }
@@ -46,7 +60,7 @@ impl BitOr for AesBlock {
 
     #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
-        Self(unsafe { vornq_u8(self.0, rhs.0) })
+        Self(unsafe { vorrq_u8(self.0, rhs.0) })
     }
 }
 
@@ -86,7 +100,7 @@ impl AesBlock {
     #[inline]
     pub const fn new(value: [u8; 16]) -> Self {
         // using transmute in simd is safe
-        unsafe { std::mem::transmute(value) }
+        unsafe { mem::transmute(value) }
     }
 
     #[inline]
@@ -102,9 +116,18 @@ impl AesBlock {
 
     #[inline]
     pub fn is_zero(self) -> bool {
+        #[cfg(not(target_arch = "arm"))]
         unsafe {
             let result = vceqzq_u64(vreinterpretq_u64_u8(self.0));
             vgetq_lane_u64::<0>(result) != 0 && vgetq_lane_u64::<1>(result) != 0
+        }
+        #[cfg(target_arch = "arm")]
+        unsafe {
+            let result = vceqq_u32(vreinterpretq_u32_u8(self.0), vdupq_n_u32(0));
+            vgetq_lane_u32::<0>(result) != 0
+                && vgetq_lane_u32::<1>(result) != 0
+                && vgetq_lane_u32::<2>(result) != 0
+                && vgetq_lane_u32::<3>(result) != 0
         }
     }
 
@@ -172,7 +195,7 @@ pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
         let mut expanded_keys: [AesBlock; 11] = mem::zeroed();
 
         let keys_ptr: *mut u32 = expanded_keys.as_mut_ptr().cast();
-        let columns = std::slice::from_raw_parts_mut(keys_ptr, 44);
+        let columns = slice::from_raw_parts_mut(keys_ptr, 44);
 
         for (i, chunk) in key.chunks_exact(4).enumerate() {
             columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
@@ -195,7 +218,7 @@ pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
         let mut expanded_keys: [AesBlock; 13] = mem::zeroed();
 
         let keys_ptr: *mut u32 = expanded_keys.as_mut_ptr().cast();
-        let columns = std::slice::from_raw_parts_mut(keys_ptr, 52);
+        let columns = slice::from_raw_parts_mut(keys_ptr, 52);
 
         for (i, chunk) in key.chunks_exact(4).enumerate() {
             columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
@@ -225,7 +248,7 @@ pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
         let mut expanded_keys: [AesBlock; 15] = mem::zeroed();
 
         let keys_ptr: *mut u32 = expanded_keys.as_mut_ptr().cast();
-        let columns = std::slice::from_raw_parts_mut(keys_ptr, 60);
+        let columns = slice::from_raw_parts_mut(keys_ptr, 60);
 
         for (i, chunk) in key.chunks_exact(4).enumerate() {
             columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
