@@ -19,6 +19,7 @@
 )]
 
 use core::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex};
+use core::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 
 use cfg_if::cfg_if;
 
@@ -142,6 +143,27 @@ impl From<AesBlock> for u128 {
     }
 }
 
+impl BitAndAssign for AesBlock {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
+impl BitOrAssign for AesBlock {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
+impl BitXorAssign for AesBlock {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = *self ^ rhs;
+    }
+}
+
 impl Debug for AesBlock {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(self, f)
@@ -226,6 +248,27 @@ impl From<AesBlockX2> for [u8; 32] {
     }
 }
 
+impl BitAndAssign for AesBlockX2 {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
+impl BitOrAssign for AesBlockX2 {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
+impl BitXorAssign for AesBlockX2 {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = *self ^ rhs;
+    }
+}
+
 impl Debug for AesBlockX2 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         <(AesBlock, AesBlock)>::from(*self).fmt(f)
@@ -261,6 +304,27 @@ impl From<AesBlockX4> for [u8; 64] {
         let mut dst = [0; 64];
         value.store_to(&mut dst);
         dst
+    }
+}
+
+impl BitAndAssign for AesBlockX4 {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = *self & rhs;
+    }
+}
+
+impl BitOrAssign for AesBlockX4 {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = *self | rhs;
+    }
+}
+
+impl BitXorAssign for AesBlockX4 {
+    #[inline]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = *self ^ rhs;
     }
 }
 

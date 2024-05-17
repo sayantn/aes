@@ -1,4 +1,4 @@
-use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C, align(16))]
@@ -41,16 +41,6 @@ impl BitAnd for AesBlock {
     }
 }
 
-impl BitAndAssign for AesBlock {
-    #[inline]
-    fn bitand_assign(&mut self, rhs: Self) {
-        self.0 &= rhs.0;
-        self.1 &= rhs.1;
-        self.2 &= rhs.2;
-        self.3 &= rhs.3;
-    }
-}
-
 impl BitOr for AesBlock {
     type Output = Self;
 
@@ -65,16 +55,6 @@ impl BitOr for AesBlock {
     }
 }
 
-impl BitOrAssign for AesBlock {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.0 |= rhs.0;
-        self.1 |= rhs.1;
-        self.2 |= rhs.2;
-        self.3 |= rhs.3;
-    }
-}
-
 impl BitXor for AesBlock {
     type Output = Self;
 
@@ -86,16 +66,6 @@ impl BitXor for AesBlock {
             self.2 ^ rhs.2,
             self.3 ^ rhs.3,
         )
-    }
-}
-
-impl BitXorAssign for AesBlock {
-    #[inline]
-    fn bitxor_assign(&mut self, rhs: Self) {
-        self.0 ^= rhs.0;
-        self.1 ^= rhs.1;
-        self.2 ^= rhs.2;
-        self.3 ^= rhs.3;
     }
 }
 

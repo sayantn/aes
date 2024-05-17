@@ -1,4 +1,4 @@
-use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::{array_from_slice, AesBlock};
 
@@ -43,14 +43,6 @@ impl BitAnd for AesBlockX2 {
     }
 }
 
-impl BitAndAssign for AesBlockX2 {
-    #[inline]
-    fn bitand_assign(&mut self, rhs: Self) {
-        self.0 &= rhs.0;
-        self.1 &= rhs.1;
-    }
-}
-
 impl BitOr for AesBlockX2 {
     type Output = Self;
 
@@ -60,28 +52,12 @@ impl BitOr for AesBlockX2 {
     }
 }
 
-impl BitOrAssign for AesBlockX2 {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.0 |= rhs.0;
-        self.1 |= rhs.1;
-    }
-}
-
 impl BitXor for AesBlockX2 {
     type Output = Self;
 
     #[inline]
     fn bitxor(self, rhs: Self) -> Self::Output {
         Self(self.0 ^ rhs.0, self.1 ^ rhs.1)
-    }
-}
-
-impl BitXorAssign for AesBlockX2 {
-    #[inline]
-    fn bitxor_assign(&mut self, rhs: Self) {
-        self.0 ^= rhs.0;
-        self.1 ^= rhs.1;
     }
 }
 

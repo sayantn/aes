@@ -2,7 +2,7 @@
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
-use core::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 use cfg_if::cfg_if;
 
@@ -97,13 +97,6 @@ impl BitAnd for AesBlockX4 {
     }
 }
 
-impl BitAndAssign for AesBlockX4 {
-    #[inline]
-    fn bitand_assign(&mut self, rhs: Self) {
-        *self = *self & rhs;
-    }
-}
-
 impl BitOr for AesBlockX4 {
     type Output = Self;
 
@@ -113,26 +106,12 @@ impl BitOr for AesBlockX4 {
     }
 }
 
-impl BitOrAssign for AesBlockX4 {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: Self) {
-        *self = *self | rhs;
-    }
-}
-
 impl BitXor for AesBlockX4 {
     type Output = Self;
 
     #[inline]
     fn bitxor(self, rhs: Self) -> Self::Output {
         Self(unsafe { _mm512_xor_si512(self.0, rhs.0) })
-    }
-}
-
-impl BitXorAssign for AesBlockX4 {
-    #[inline]
-    fn bitxor_assign(&mut self, rhs: Self) {
-        *self = *self ^ rhs;
     }
 }
 
