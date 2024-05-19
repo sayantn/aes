@@ -9,10 +9,10 @@ pub struct AesBlock(u32, u32, u32, u32);
 macro_rules! _asm {
     ($instruction:expr, $idx:literal, $rsd:ident, $rs:expr) => {
         asm!(
-            concat!($instruction, "i {},{},{},", $idx),
-            lateout(reg) $rsd,
-            in(reg) $rsd,
-            in(reg) $rs,
+            concat!($instruction, "i {rd},{rs1},{rs2},", $idx),
+            rd = lateout(reg) $rsd,
+            rs1 = in(reg) $rsd,
+            rs2 = in(reg) $rs,
             options(pure, nomem, nostack)
         )
     };

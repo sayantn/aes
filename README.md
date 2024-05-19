@@ -1,7 +1,7 @@
 This is a pure-Rust platform-agnostic [AES](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) library, that
 is focused on reusability and optimal performance.
 
-This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 5
+This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 6
 implementations, among which it automatically decides the best (most performant) using Cargo's `target_feature` flags.
 
 # The implementations and their requirements are:

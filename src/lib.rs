@@ -109,6 +109,7 @@ fn try_from_slice<const N: usize, T: From<[u8; N]>>(value: &[u8]) -> Result<T, u
     }
 }
 
+#[allow(unused)]
 #[inline(always)]
 const fn array_from_slice<const N: usize>(value: &[u8], offset: usize) -> [u8; N] {
     debug_assert!(value.len() - offset >= N);
@@ -491,21 +492,20 @@ fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; 
 }
 
 cfg_if! {
-if #[cfg(any(
-    all(
-        any(
-            target_arch = "aarch64",
-            target_arch = "arm64ec",
-            all(feature = "nightly", target_arch = "arm", target_feature = "v8")
-        ),
-        target_feature = "aes",
-    ), all(
-            feature = "nightly",
-            target_arch = "riscv32",
-            target_feature = "zkne",
-            target_feature = "zknd"
-        )
-    ))] {
+    if #[cfg(any(
+        all(
+            any(
+                target_arch = "aarch64",
+                target_arch = "arm64ec",
+                all(feature = "nightly", target_arch = "arm", target_feature = "v8")
+            ),
+            target_feature = "aes",
+        ), all(
+                feature = "nightly",
+                target_arch = "riscv32",
+                target_feature = "zkne",
+                target_feature = "zknd"
+        )))] {
         macro_rules! aes_intr {
             ($($name:ident),*) => {$(
                 impl $name {
@@ -558,7 +558,7 @@ if #[cfg(any(
                 acc.pre_dec_last($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
             }};
         }
-}else{
+    } else {
         macro_rules! impl_aes {
             (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
                 let mut acc = $plaintext ^ $round_keys[0].into();
