@@ -52,6 +52,15 @@ cfg_if! {
         mod aes_riscv64;
         pub use aes_riscv64::AesBlock;
         use aes_riscv64::*;
+    } else if #[cfg(all(
+        feature = "nightly",
+        target_arch = "riscv32",
+        target_feature = "zkne",
+        target_feature = "zknd"
+    ))] {
+        mod aes_riscv32;
+        pub use aes_riscv32::AesBlock;
+        use aes_riscv32::*;
     } else {
         mod aes_default;
         pub use aes_default::AesBlock;
@@ -482,37 +491,50 @@ fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; 
 }
 
 cfg_if! {
-if #[cfg(all(
+if #[cfg(any(
+    all(
         any(
             target_arch = "aarch64",
             target_arch = "arm64ec",
             all(feature = "nightly", target_arch = "arm", target_feature = "v8")
         ),
-        target_feature = "aes"
-))] {
+        target_feature = "aes",
+    ), all(
+            feature = "nightly",
+            target_arch = "riscv32",
+            target_feature = "zkne",
+            target_feature = "zknd"
+        )
+    ))] {
         macro_rules! aes_intr {
             ($($name:ident),*) => {$(
                 impl $name {
-                    fn aese(self, round_key:Self) -> Self {
+                    #[inline(always)]
+                    fn pre_enc(self, round_key:Self) -> Self {
                         let (a, b) = self.into();
                         let (rk0, rk1) = round_key.into();
-                        (a.aese(rk0), b.aese(rk1)).into()
+                        (a.pre_enc(rk0), b.pre_enc(rk1)).into()
                     }
 
-                    fn aesd(self, round_key:Self) -> Self {
+                    #[inline(always)]
+                    fn pre_enc_last(self, round_key:Self) -> Self {
                         let (a, b) = self.into();
                         let (rk0, rk1) = round_key.into();
-                        (a.aesd(rk0), b.aesd(rk1)).into()
+                        (a.pre_enc_last(rk0), b.pre_enc_last(rk1)).into()
                     }
 
-                    fn mc(self) -> Self {
+                    #[inline(always)]
+                    fn pre_dec(self, round_key:Self) -> Self {
                         let (a, b) = self.into();
-                        (a.mc(), b.mc()).into()
+                        let (rk0, rk1) = round_key.into();
+                        (a.pre_dec(rk0), b.pre_dec(rk1)).into()
                     }
 
-                    fn imc(self) -> Self {
+                    #[inline(always)]
+                    fn pre_dec_last(self, round_key:Self) -> Self {
                         let (a, b) = self.into();
-                        (a.imc(), b.imc()).into()
+                        let (rk0, rk1) = round_key.into();
+                        (a.pre_dec_last(rk0), b.pre_dec_last(rk1)).into()
                     }
                 }
             )*};
@@ -524,16 +546,16 @@ if #[cfg(all(
             (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
                 let mut acc = $plaintext;
                 for i in 0..($max - 1) {
-                    acc = acc.aese($round_keys[i].into()).mc();
+                    acc = acc.pre_enc($round_keys[i].into());
                 }
-                acc.aese($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
+                acc.pre_enc_last($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
             }};
             (dec: $round_keys: expr, $ciphertext: expr, $max:literal) => {{
                 let mut acc = $ciphertext;
                 for i in 0..($max - 1) {
-                    acc = acc.aesd($round_keys[i].into()).imc();
+                    acc = acc.pre_dec($round_keys[i].into());
                 }
-                acc.aesd($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
+                acc.pre_dec_last($round_keys[$max - 1].into()) ^ $round_keys[$max].into()
             }};
         }
 }else{

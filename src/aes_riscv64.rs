@@ -3,7 +3,7 @@ use core::ops::{BitAnd, BitOr, BitXor, Not};
 use core::{mem, slice};
 
 macro_rules! _asm {
-    (asm: $assembly:expr, $rs1:expr $(, $rs2:expr)?) => {{
+    (asm: $assembly:expr, $rs1:expr $(,$rs2:expr)?) => {{
         let value: u64;
         unsafe {
             asm!(
@@ -12,7 +12,7 @@ macro_rules! _asm {
                 rs1 = in(reg) $rs1,
                 $(rs2 = in(reg) $rs2, )?
                 options(pure, nomem, nostack)
-            )
+            );
         }
         value
     }};
@@ -235,27 +235,25 @@ pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
 }
 
 pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
-    unsafe {
-        let mut expanded_keys: [AesBlock; 13] = mem::zeroed();
+    let mut expanded_keys: [AesBlock; 13] = unsafe { mem::zeroed() };
 
-        let keys_ptr: *mut u64 = expanded_keys.as_mut_ptr().cast();
-        let columns = slice::from_raw_parts_mut(keys_ptr, 26);
+    let keys_ptr: *mut u64 = expanded_keys.as_mut_ptr().cast();
+    let columns = unsafe { slice::from_raw_parts_mut(keys_ptr, 26) };
 
-        for (i, chunk) in key.chunks_exact(8).enumerate() {
-            columns[i] = u64::from_ne_bytes(chunk.try_into().unwrap());
-        }
-
-        for i in (0..21).step_by(3) {
-            columns[i + 3] = aes64ks2(aes64ks1i(columns[i + 2], (i / 3) as u8), columns[i + 0]);
-            columns[i + 4] = aes64ks2(columns[i + 3], columns[i + 1]);
-            columns[i + 5] = aes64ks2(columns[i + 4], columns[i + 2]);
-        }
-
-        columns[24] = aes64ks2(aes64ks1i(columns[23], 7), columns[21]);
-        columns[25] = aes64ks2(columns[24], columns[22]);
-
-        expanded_keys
+    for (i, chunk) in key.chunks_exact(8).enumerate() {
+        columns[i] = u64::from_ne_bytes(chunk.try_into().unwrap());
     }
+
+    for i in (0..21).step_by(3) {
+        columns[i + 3] = aes64ks2(aes64ks1i(columns[i + 2], (i / 3) as u8), columns[i + 0]);
+        columns[i + 4] = aes64ks2(columns[i + 3], columns[i + 1]);
+        columns[i + 5] = aes64ks2(columns[i + 4], columns[i + 2]);
+    }
+
+    columns[24] = aes64ks2(aes64ks1i(columns[23], 7), columns[21]);
+    columns[25] = aes64ks2(columns[24], columns[22]);
+
+    expanded_keys
 }
 
 pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
