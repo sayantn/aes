@@ -484,27 +484,23 @@ if #[cfg(all(
         macro_rules! aes_intr {
             ($($name:ident),*) => {$(
                 impl $name {
-                    #[inline]
                     fn aese(self, round_key:Self) -> Self {
                         let (a, b) = self.into();
                         let (rk0, rk1) = round_key.into();
                         (a.aese(rk0), b.aese(rk1)).into()
                     }
 
-                    #[inline]
                     fn aesd(self, round_key:Self) -> Self {
                         let (a, b) = self.into();
                         let (rk0, rk1) = round_key.into();
                         (a.aesd(rk0), b.aesd(rk1)).into()
                     }
 
-                    #[inline]
                     fn mc(self) -> Self {
                         let (a, b) = self.into();
                         (a.mc(), b.mc()).into()
                     }
 
-                    #[inline]
                     fn imc(self) -> Self {
                         let (a, b) = self.into();
                         (a.imc(), b.imc()).into()
