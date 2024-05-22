@@ -41,14 +41,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
-          command: build --verbose
+          command: build
           args: --target ${{ inputs.target }}
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
-          command: test --verbose
+          command: test
           args: --target ${{ inputs.target }}
 
   test-aesni:
@@ -80,14 +80,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
-          command: build --verbose
+          command: build
           args: --target ${{ inputs.target }}
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
-          command: test --verbose
+          command: test
           args: --target ${{ inputs.target }}
 
   test-aesni-vaes:
@@ -118,7 +118,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
-          command: build --verbose
+          command: build
           args: --target ${{ inputs.target }} --features=nightly
 
       - name: Test
@@ -126,7 +126,7 @@ jobs:
         with:
           use-cross: true
           command: test
-          args: --verbose --target ${{ inputs.target }} --features=nightly
+          args: --target ${{ inputs.target }} --features=nightly
 
   test-aesni-vaes-avx512f:
     if: contains(inputs.target, '86') && inputs.channel == 'nightly'
@@ -157,11 +157,11 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: --verbose --target ${{ inputs.target }} --features=nightly
+          args: --target ${{ inputs.target }} --features=nightly
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test
-          args: --verbose --target ${{ inputs.target }} --features=nightly
+          args: --target ${{ inputs.target }} --features=nightly
