@@ -1,0 +1,52 @@
+name: Run Test
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: boolean
+      target-feature:
+        required: false
+        type: string
+        default: ''
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.target-feature) }}
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+

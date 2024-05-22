@@ -36,6 +36,12 @@ jobs:
             caps: X86_64_UNKNOWN_LINUX_GNU
           - triple: aarch64-unknown-linux-gnu
             caps: AARCH64_UNKNOWN_LINUX_GNU
+          - triple: riscv64gc-unknown-linux-gnu
+            caps: RISCV64GC_UNKNOWN_LINUX_GNU
+          - triple: riscv32i-unknown-none-elf
+            caps: RISCV64GC_UNKNOWN_NONE_ELF
+          - triple: i686-unknown-linux-gnu
+            caps: I686_UNKNOWN_LINUX_GNU
         channel:
           - stable
           - beta
@@ -45,4 +51,3 @@ jobs:
       target: ${{ matrix.target.triple }}
       target-in-caps: ${{ matrix.target.caps }}
       channel: ${{ matrix.channel }}
-    secrets: inherit
