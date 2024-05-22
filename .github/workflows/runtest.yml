@@ -15,7 +15,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    continue-on-error: ${{ inputs.channel == 'nightly' }}
     steps:
       - uses: actions/checkout@v3
 
