@@ -3,135 +3,165 @@
 name: Rust
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      target-in-caps:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
 
 jobs:
-  style:
-    name: Check Style
+  test-software-aes:
     runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt
-          profile: minimal
-          override: true
-
-      - name: Rustfmt check
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all --check
-
-  test:
-    runs-on: ubuntu-latest
-
-    # TODO: add more platforms (all tier 1 and tier 2, tier 3 testing is optional)
-
-    strategy:
-      matrix:
-        impl:
-          - name: AES-NI
-            target:
-              - triple: x86_64-unknown-linux-gnu
-                caps: X86_64_UNKNOWN_LINUX_GNU
-              - triple: x86_64-pc-windows-msvc
-                caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
-            rustflags: -C target-feature=+sse4.1,+aes
-            channel: 
-              - stable
-              - beta
-              - nightly
-          - name: AES-NI with VAES
-            target:
-              - triple: x86_64-unknown-linux-gnu
-                caps: X86_64_UNKNOWN_LINUX_GNU
-              - triple: x86_64-pc-windows-msvc
-                caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
-            rustflags: -C target-feature=+vaes
-            channel: nightly
-          - name: AES-NI with VAES and AVX-512
-            target:
-              - triple: x86_64-unknown-linux-gnu
-                caps: X86_64_UNKNOWN_LINUX_GNU
-              - triple: x86_64-pc-windows-msvc
-                caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
-            rustflags: -C target-feature=+vaes,+avx512f
-            channel: nightly
-          - name: Neon
-            target:
-              - triple: aarch64-unknown-linux-gnu
-                caps: AARCH64_UNKNOWN_LINUX_GNU
-            rustflags: -C target-feature=+aes
-            channel: 
-              - stable
-              - beta
-              - nightly
-          - name: Risc-V RV64
-            target:
-              - triple: riscv64gc-unknown-linux-gnu
-                caps: RISCV64GC_UNKNOWN_LINUX_GNU
-            rustflags: -C target-feature=+zkne,+zknd
-            channel: nightly
-          - name: Risc-V RV32
-            target:
-              - triple: riscv32i-unknown-none-elf
-                caps: RISCV32I_UNKNOWN_NONE_ELF
-            rustflags: -C target-feature=+zkne,+zknd
-            channel: nightly
-          - name: Software AES
-            target:
-              - triple: x86_64-unknown-linux-gnu
-                caps: X86_64_UNKNOWN_LINUX_GNU
-            rustflags: -C target-feature=
-            channel: 
-              - stable
-              - beta
-              - nightly
-        include:
-          - channel: nightly
-            features: --features=nightly
-
-    name: Test ${{ matrix.impl.name }} on ${{ matrix.impl.target.triple }}
-
+    name: Test of Software Impl on ${{ inputs.target }}
     steps:
       - uses: actions/checkout@v3
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: ${{ matrix.impl.channel }}
-          target: ${{ matrix.impl.target.triple }}
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
           profile: minimal
           components: clippy
           override: true
-
-      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS={1}" >> $GITHUB_ENV', matrix.impl.target.caps, matrix.impl.rustflags) }}
 
       - name: Clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: ${{ format('--target {0} {1}', matrix.impl.target.triple, matrix.features || '') }}
+          args: --target ${{ inputs.target }}
 
       - name: Build
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build --verbose
-          args: ${{ format('--target {0} {1}', matrix.impl.target.triple, matrix.features || '') }}
+          args: --target ${{ inputs.target }}
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test --verbose
-          args: ${{ format('--target {0} {1}', matrix.impl.target.triple, matrix.features || '') }}
+          args: --target ${{ inputs.target }}
+
+  test-aesni:
+    # simple test for x86(64)
+    if: contains(inputs.target, '86')
+    runs-on: ubuntu-latest
+    name: Test of AESNI on ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS=+sse4.1,+aes"', inputs.target-in-caps) }}
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ inputs.target }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build --verbose
+          args: --target ${{ inputs.target }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test --verbose
+          args: --target ${{ inputs.target }}
+
+  test-aesni-vaes:
+    if: contains(inputs.target, '86') && inputs.channel == 'nightly'
+    runs-on: ubuntu-latest
+    name: Test of AESNI with VAES on ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS=+vaes"', inputs.target-in-caps) }}
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ inputs.target }} --features=nightly
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build --verbose
+          args: --target ${{ inputs.target }} --features=nightly
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --verbose --target ${{ inputs.target }} --features=nightly
+
+  test-aesni-vaes-avx512f:
+    if: contains(inputs.target, '86') && inputs.channel == 'nightly'
+    runs-on: ubuntu-latest
+    name: Test of AESNI with VAES and AVX-512 on ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS=+vaes,+avx512f"', inputs.target-in-caps) }}
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ inputs.target }} --features=nightly
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --verbose --target ${{ inputs.target }} --features=nightly
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --verbose --target ${{ inputs.target }} --features=nightly

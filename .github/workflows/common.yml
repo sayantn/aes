@@ -1,0 +1,48 @@
+name: common
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  style:
+    name: Check Style
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          profile: minimal
+          override: true
+
+      - name: Rustfmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all --check
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - triple: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+          - triple: aarch64-unknown-linux-gnu
+            caps: AARCH64_UNKNOWN_LINUX_GNU
+        channel:
+          - stable
+          - beta
+          - nightly
+    uses: ./.github/workflows/rust.yml
+    with:
+      target: ${{ matrix.target.triple }}
+      target-in-caps: ${{ matrix.target.caps }}
+      channel: ${{ matrix.channel }}
+    secrets: inherit
