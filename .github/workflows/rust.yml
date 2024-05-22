@@ -46,7 +46,10 @@ jobs:
               - triple: x86_64-pc-windows-msvc
                 caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
             rustflags: -C target-feature=+sse4.1,+aes
-            channel: [stable, beta, nightly]
+            channel: 
+              - stable
+              - beta
+              - nightly
           - name: AES-NI with VAES
             target:
               - triple: x86_64-unknown-linux-gnu
@@ -54,7 +57,7 @@ jobs:
               - triple: x86_64-pc-windows-msvc
                 caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
             rustflags: -C target-feature=+vaes
-            channel: [nightly]
+            channel: nightly
           - name: AES-NI with VAES and AVX-512
             target:
               - triple: x86_64-unknown-linux-gnu
@@ -62,31 +65,37 @@ jobs:
               - triple: x86_64-pc-windows-msvc
                 caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
             rustflags: -C target-feature=+vaes,+avx512f
-            channel: [nightly]
+            channel: nightly
           - name: Neon
             target:
               - triple: aarch64-unknown-linux-gnu
                 caps: AARCH64_UNKNOWN_LINUX_GNU
             rustflags: -C target-feature=+aes
-            channel: [stable, beta, nightly]
+            channel: 
+              - stable
+              - beta
+              - nightly
           - name: Risc-V RV64
             target:
               - triple: riscv64gc-unknown-linux-gnu
                 caps: RISCV64GC_UNKNOWN_LINUX_GNU
             rustflags: -C target-feature=+zkne,+zknd
-            channel: [nightly]
+            channel: nightly
           - name: Risc-V RV32
             target:
               - triple: riscv32i-unknown-none-elf
                 caps: RISCV32I_UNKNOWN_NONE_ELF
             rustflags: -C target-feature=+zkne,+zknd
-            channel: [nightly]
+            channel: nightly
           - name: Software AES
             target:
               - triple: x86_64-unknown-linux-gnu
                 caps: X86_64_UNKNOWN_LINUX_GNU
             rustflags: -C target-feature=
-            channel: [stable, beta, nightly]
+            channel: 
+              - stable
+              - beta
+              - nightly
         include:
           - channel: nightly
             features: --features=nightly
