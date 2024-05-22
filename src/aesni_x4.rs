@@ -4,8 +4,6 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
-use cfg_if::cfg_if;
-
 use crate::aes_x86::AesBlock;
 use crate::aesni_x2::AesBlockX2;
 

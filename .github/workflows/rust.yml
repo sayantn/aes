@@ -1,3 +1,5 @@
+# This checks fmt, clippy, and does build and test on each arch for each impl using cross
+
 name: Rust
 
 on:
@@ -6,17 +8,121 @@ on:
   pull_request:
     branches: [ "master" ]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  build:
-
+  style:
+    name: Check Style
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt
+          profile: minimal
+          override: true
+
+      - name: Rustfmt check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all --check
+
+  test:
+    runs-on: ubuntu-latest
+
+    # TODO: add more platforms (all tier 1 and tier 2, tier 3 testing is optional)
+
+    strategy:
+      matrix:
+        impl:
+          - name: AES-NI
+            target:
+              - triple: x86_64-unknown-linux-gnu
+                caps: X86_64_UNKNOWN_LINUX_GNU
+              - triple: x86_64-pc-windows-msvc
+                caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
+            rustflags: -C target-feature=+sse4.1,+aes
+            channel: [stable, beta, nightly]
+          - name: AES-NI with VAES
+            target:
+              - triple: x86_64-unknown-linux-gnu
+                caps: X86_64_UNKNOWN_LINUX_GNU
+              - triple: x86_64-pc-windows-msvc
+                caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
+            rustflags: -C target-feature=+vaes
+            channel: [nightly]
+          - name: AES-NI with VAES and AVX-512
+            target:
+              - triple: x86_64-unknown-linux-gnu
+                caps: X86_64_UNKNOWN_LINUX_GNU
+              - triple: x86_64-pc-windows-msvc
+                caps: X86_64_UNKNOWN_PC_WINDOWS_MSVC
+            rustflags: -C target-feature=+vaes,+avx512f
+            channel: [nightly]
+          - name: Neon
+            target:
+              - triple: aarch64-unknown-linux-gnu
+                caps: AARCH64_UNKNOWN_LINUX_GNU
+            rustflags: -C target-feature=+aes
+            channel: [stable, beta, nightly]
+          - name: Risc-V RV64
+            target:
+              - triple: riscv64gc-unknown-linux-gnu
+                caps: RISCV64GC_UNKNOWN_LINUX_GNU
+            rustflags: -C target-feature=+zkne,+zknd
+            channel: [nightly]
+          - name: Risc-V RV32
+            target:
+              - triple: riscv32i-unknown-none-elf
+                caps: RISCV32I_UNKNOWN_NONE_ELF
+            rustflags: -C target-feature=+zkne,+zknd
+            channel: [nightly]
+          - name: Software AES
+            target:
+              - triple: x86_64-unknown-linux-gnu
+                caps: X86_64_UNKNOWN_LINUX_GNU
+            rustflags: -C target-feature=
+            channel: [stable, beta, nightly]
+        include:
+          - channel: nightly
+            features: --features=nightly
+
+    name: Test ${{ matrix.impl.name }} on ${{ matrix.impl.target.triple }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.impl.channel }}
+          target: ${{ matrix.impl.target.triple }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS={1}" >> $GITHUB_ENV', matrix.impl.target.caps, matrix.impl.rustflags) }}
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: ${{ format('--target {0} {1}', matrix.impl.target.triple, matrix.features || '') }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build --verbose
+          args: ${{ format('--target {0} {1}', matrix.impl.target.triple, matrix.features || '') }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test --verbose
+          args: ${{ format('--target {0} {1}', matrix.impl.target.triple, matrix.features || '') }}

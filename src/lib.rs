@@ -17,6 +17,7 @@
     ),
     feature(stdarch_arm_neon_intrinsics)
 )]
+#![allow(clippy::identity_op)]
 
 use core::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 use core::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
