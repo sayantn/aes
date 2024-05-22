@@ -24,8 +24,7 @@ jobs:
       channel: ${{ inputs.channel }}
 
   test-aesni:
-    # simple test for x86(64)
-    if: contains(inputs.target, '86')
+    if: ${{ contains(inputs.target, '86') }}
     name: Test of AESNI on ${{ inputs.target }}
     uses: ./.github/workflows/runtest.yml
     with:
@@ -34,7 +33,7 @@ jobs:
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+sse4.1,+aes', inputs.target-in-caps) }}
 
   test-aesni-vaes:
-    if: contains(inputs.target, '86') && inputs.channel == 'nightly'
+    if: ${{ contains(inputs.target, '86') && inputs.channel == 'nightly' }}
     name: Test of AESNI with VAES on ${{ inputs.target }}
     uses: ./.github/workflows/runtest.yml
     with:
@@ -43,7 +42,7 @@ jobs:
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+vaes', inputs.target-in-caps) }}
 
   test-aesni-vaes-avx512f:
-    if: contains(inputs.target, '86') && inputs.channel == 'nightly'
+    if: ${{ contains(inputs.target, '86') && inputs.channel == 'nightly' }}
     name: Test of AESNI with VAES and AVX-512 on ${{ inputs.target }}
     uses: ./.github/workflows/runtest.yml
     with:
@@ -52,7 +51,7 @@ jobs:
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+vaes,+avx512f', inputs.target-in-caps) }}
 
   test-neon:
-    if: startsWith(inputs.target, 'aarch64') || startsWith(inputs.target, 'arm64ec') || (startsWith(inputs.target, 'armv8') && inputs.channel == 'nightly')
+    if: ${{ startsWith(inputs.target, 'aarch64') || startsWith(inputs.target, 'arm64ec') || (startsWith(inputs.target, 'armv8') && inputs.channel == 'nightly') }}
     name: Test of Neon on ${{ inputs.target }}
     uses: ./.github/workflows/runtest.yml
     with:
@@ -61,7 +60,7 @@ jobs:
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+aes', inputs.target-in-caps) }}
 
   test-riscv:
-    if: startsWith(inputs.target, 'riscv') && inputs.channel == 'nightly'
+    if: ${{ startsWith(inputs.target, 'riscv') && inputs.channel == 'nightly' }}
     name: Test of Neon on ${{ inputs.target }}
     uses: ./.github/workflows/runtest.yml
     with:
