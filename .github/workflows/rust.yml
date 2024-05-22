@@ -39,7 +39,7 @@ jobs:
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ inputs.target }}
-      channel: nightly
+      channel: 'nightly'
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+vaes', inputs.target-in-caps) }}
 
   test-aesni-vaes-avx512f:
@@ -48,7 +48,7 @@ jobs:
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ inputs.target }}
-      channel: nightly
+      channel: 'nightly'
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+vaes,+avx512f', inputs.target-in-caps) }}
 
   test-neon:
@@ -66,5 +66,5 @@ jobs:
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ inputs.target }}
-      channel: nightly
+      channel: 'nightly'
       target-feature: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+zkne,+zknd', inputs.target-in-caps) }}
