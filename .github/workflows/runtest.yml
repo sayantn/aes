@@ -34,19 +34,19 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: +${{ inputs.channel }} --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
       - name: Build
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: +${{ inputs.channel }} --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: +${{ inputs.channel }} --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
