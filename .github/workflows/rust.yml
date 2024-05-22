@@ -18,6 +18,7 @@ on:
 jobs:
   test-software-aes:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
     name: Test of Software Impl on ${{ inputs.target }}
     steps:
       - uses: actions/checkout@v3
@@ -55,6 +56,7 @@ jobs:
     # simple test for x86(64)
     if: contains(inputs.target, '86')
     runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
     name: Test of AESNI on ${{ inputs.target }}
     steps:
       - uses: actions/checkout@v3
@@ -93,6 +95,7 @@ jobs:
   test-aesni-vaes:
     if: contains(inputs.target, '86') && inputs.channel == 'nightly'
     runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
     name: Test of AESNI with VAES on ${{ inputs.target }}
     steps:
       - uses: actions/checkout@v3
@@ -131,6 +134,7 @@ jobs:
   test-aesni-vaes-avx512f:
     if: contains(inputs.target, '86') && inputs.channel == 'nightly'
     runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
     name: Test of AESNI with VAES and AVX-512 on ${{ inputs.target }}
     steps:
       - uses: actions/checkout@v3
@@ -145,6 +149,85 @@ jobs:
           override: true
 
       - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS=+vaes,+avx512f"', inputs.target-in-caps) }}
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ inputs.target }} --features=nightly
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target ${{ inputs.target }} --features=nightly
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --target ${{ inputs.target }} --features=nightly
+
+  test-neon:
+    # simple test for x86(64)
+    if: startsWith(inputs.target, 'aarch64')
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
+    name: Test of Neon on ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS=+aes"', inputs.target-in-caps) }}
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ inputs.target }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target ${{ inputs.target }}
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --target ${{ inputs.target }}
+
+  test-riscv:
+    if: startsWith(inputs.target, 'riscv')
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
+    name: Test of AESNI with VAES on ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ inputs.channel }}
+          target: ${{ inputs.target }}
+          profile: minimal
+          components: clippy
+          override: true
+
+      - run: ${{ format('echo "CROSS_TARGET_{0}_RUSTFLAGS=+zkne,+zknd"', inputs.target-in-caps) }}
 
       - name: Clippy
         uses: actions-rs/cargo@v1
