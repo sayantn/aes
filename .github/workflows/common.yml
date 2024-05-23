@@ -89,12 +89,10 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          # 64-bit
           - triple: x86_64-unknown-linux-gnu
             caps: X86_64_UNKNOWN_LINUX_GNU
           - triple: x86_64-unknown-linux-musl
             caps: X86_64_UNKNOWN_LINUX_MUSL
-          # 32-bit
           - triple: i686-unknown-linux-gnu
             caps: I686_UNKNOWN_LINUX_GNU
           - triple: i586-unknown-linux-gnu
@@ -127,12 +125,8 @@ jobs:
         target:
           - triple: armv7-linux-androideabi
             caps: ARMV7_LINUX_ANDROIDEABI
-          - triple: armv7-unknown-linux-gnueabi
-            caps: ARMV7_UNKNOWN_LINUX_GNUEABI
           - triple: armv7-unknown-linux-gnueabihf
             caps: ARMV7_UNKNOWN_LINUX_GNUEABIHF
-          - triple: armv7-unknown-linux-musleabi
-            caps: ARMV7_UNKNOWN_LINUX_MUSLEABI
           - triple: armv7-unknown-linux-musleabihf
             caps: ARMV7_UNKNOWN_LINUX_MUSLEABIHF
           - triple: thumbv7neon-linux-androideabi
@@ -168,7 +162,8 @@ jobs:
           - arm-unknown-linux-musleabihf
           - armv5te-unknown-linux-gnueabi
           - armv5te-unknown-linux-musleabi
-          - loongarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabi
+          - armv7-unknown-linux-musleabi
           - mips-unknown-linux-gnu
           - mips-unknown-linux-musl
           - mips64-unknown-linux-gnuabi64
