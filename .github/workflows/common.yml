@@ -27,6 +27,63 @@ jobs:
           command: fmt
           args: --all --check
 
+  clippy:
+    continue-on-error: true
+    name: Clippy Check of ${{ matrix.impl.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        impl:
+          - name: AES-NI
+            target: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+            target-features: +sse4.1,+aes
+          - name: AES-NI with VAES
+            target: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+            target-features: +vaes
+          - name: AES-NI with VAES and AVX-512
+            target: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+            target-features: +vaes,+avx512f
+          - name: Neon
+            target: aarch64-unknown-linux-gnu
+            caps: AARCH64_UNKNOWN_LINUX_GNU
+            target-features: +aes
+          - name: RV64
+            target: riscv64gc-unknown-linux-gnu
+            caps: RISCV64GC_UNKNOWN_LINUX_GNU
+            target-features: +zkne,+zknd
+          - name: RV32
+            target: riscv32i-unknown-none-elf
+            caps: RISCV32I_UNKNOWN_NONE_ELF
+            target-features: +zkne,+zknd
+          - name: Software
+            target: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+            target-features: ''
+    steps:
+      - uses: actions/checkout@v3
+
+      - run: ${{ format('echo "CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature={1}" >> $GITHUB_ENV', matrix.impl.caps, matrix.impl.target-feature) }}
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: ${{ matrix.impl.target }}
+          components: clippy
+          profile: minimal
+          override: true
+
+      - name: Clippy Check
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target ${{ matrix.impl.target }} --features=nightly --no-deps --frozen
+
   test-x86:
     strategy:
       fail-fast: false
@@ -78,6 +135,16 @@ jobs:
       fail-fast: false
       matrix:
         target:
+          - triple: armv7-linux-androideabi
+            caps: ARMV7_LINUX_ANDROIDEABI
+          - triple: armv7-unknown-linux-gnueabi
+            caps: ARMV7_UNKNOWN_LINUX_GNUEABI
+          - triple: armv7-unknown-linux-gnueabihf
+            caps: ARMV7_UNKNOWN_LINUX_GNUEABIHF
+          - triple: armv7-unknown-linux-musleabi
+            caps: ARMV7_UNKNOWN_LINUX_MUSLEABI
+          - triple: armv7-unknown-linux-musleabihf
+            caps: ARMV7_UNKNOWN_LINUX_MUSLEABIHF
           - triple: thumbv7neon-linux-androideabi
             caps: THUMBV7NEON_LINUX_ANDROIDEABI
           - triple: thumbv7neon-unknown-linux-gnueabihf
@@ -111,11 +178,6 @@ jobs:
           - arm-unknown-linux-musleabihf
           - armv5te-unknown-linux-gnueabi
           - armv5te-unknown-linux-musleabi
-          - armv7-linux-androideabi
-          - armv7-unknown-linux-gnueabi
-          - armv7-unknown-linux-gnueabihf
-          - armv7-unknown-linux-musleabi
-          - armv7-unknown-linux-musleabihf
           - loongarch64-unknown-linux-gnu
           - mips-unknown-linux-gnu
           - mips-unknown-linux-musl
