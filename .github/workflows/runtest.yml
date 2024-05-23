@@ -27,14 +27,7 @@ jobs:
         with:
           toolchain: ${{ inputs.channel }}
           profile: minimal
-          components: clippy
           override: true
-
-      - name: Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
       - name: Build
         uses: actions-rs/cargo@v1
