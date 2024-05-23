@@ -34,10 +34,5 @@ jobs:
       channel: nightly
       env-vars: ${{ format('CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature=+vaes', inputs.target-in-caps) }}
 
-  test-aesni-vaes-avx512f:
-    name: Test of AESNI with VAES and AVX-512 on ${{ inputs.target }}
-    uses: ./.github/workflows/runtest.yml
-    with:
-      target: ${{ inputs.target }}
-      channel: nightly
-      env-vars: ${{ format('CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature=+vaes,+avx512f', inputs.target-in-caps) }}
+# vaes-avx512 implementation cannot be tested on qemu as qemu apparently doesn't support 512-bit vaes, please use a cloud server
+# possible options are AWS 7i,7i-flex,7a instances, GCloud N4,C3,C3D,N2(with Ice Lake), Azure Dv5,Dsv5,Ddv5,Ddsv5,Dlsv5,Dldsv5Dasv6,Dadsv6,Dalsv6,Daldsv6 etc

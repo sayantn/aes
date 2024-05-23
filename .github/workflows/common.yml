@@ -186,7 +186,7 @@ jobs:
           - mipsel-unknown-linux-musl
           - mips64el-unknown-linux-gnuabi64
           - mips64el-unknown-linux-muslabi64
-    name: Test of Software AES on ${{ inputs.target }} with nightly and build-std
+    name: Test of Software AES on ${{ matrix.target }} with nightly and build-std
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}

@@ -20,7 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.env-vars) }}
+      - run: sudo apt update && sudo apt upgrade -y
+        continue-on-error: true
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -28,6 +29,8 @@ jobs:
           toolchain: ${{ inputs.channel }}
           profile: minimal
           override: true
+
+      - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.env-vars) }}
 
       - name: Build
         uses: actions-rs/cargo@v1
