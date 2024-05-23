@@ -27,24 +27,50 @@ jobs:
           command: fmt
           args: --all --check
 
-  test:
+  test-x86:
     strategy:
       fail-fast: false
       matrix:
         target:
           - triple: x86_64-unknown-linux-gnu
             caps: X86_64_UNKNOWN_LINUX_GNU
-          - triple: aarch64-unknown-linux-gnu
-            caps: AARCH64_UNKNOWN_LINUX_GNU
-          - triple: riscv64gc-unknown-linux-gnu
-            caps: RISCV64GC_UNKNOWN_LINUX_GNU
-        channel:
-          - stable
-          - beta
-          - nightly
-    uses: ./.github/workflows/rust.yml
+    uses: ./.github/workflows/x86.yml
     with:
       target: ${{ matrix.target.triple }}
       target-in-caps: ${{ matrix.target.caps }}
-      channel: ${{ matrix.channel }}
-    secrets: inherit
+
+  test-arm:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - triple: aarch64-unknown-linux-gnu
+            caps: AARCH64_UNKNOWN_LINUX_GNU
+    uses: ./.github/workflows/arm.yml
+    with:
+      target: ${{ matrix.target.triple }}
+      target-in-caps: ${{ matrix.target.caps }}
+
+  test-riscv:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - triple: riscv64gc-unknown-linux-gnu
+            caps: RISCV64GC_UNKNOWN_LINUX_GNU
+    uses: ./.github/workflows/riscv.yml
+    with:
+      target: ${{ matrix.target.triple }}
+      target-in-caps: ${{ matrix.target.caps }}
+
+  test-other:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - triple: powerpc64-unknown-linux-gnu
+            caps: POWERPC64_UNKNOWN_LINUX_GNU
+    uses: ./.github/workflows/other.yml
+    with:
+      target: ${{ matrix.target.triple }}
+      target-in-caps: ${{ matrix.target.caps }}

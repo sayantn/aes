@@ -1,0 +1,34 @@
+name: ARM Test
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      target-in-caps:
+        required: true
+        type: string
+
+jobs:
+  test-software:
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [ stable, beta, nightly ]
+    name: Test of Software AES on ${{ inputs.target }} with ${{ matrix.channel }}
+    uses: ./.github/workflows/runtest.yml
+    with:
+      target: ${{ inputs.target }}
+      channel: ${{ matrix.channel }}
+
+  test-neon:
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [ stable, beta, nightly ]
+    name: Test of Neon on ${{ inputs.target }} with ${{ matrix.channel }}
+    uses: ./.github/workflows/runtest.yml
+    with:
+      target: ${{ inputs.target }}
+      channel: ${{ matrix.channel }}
+      env-vars: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+aes', inputs.target-in-caps) }}

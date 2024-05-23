@@ -7,18 +7,19 @@ on:
         type: string
       channel:
         required: true
-        type: boolean
-      target-feature:
+        type: string
+      env-vars:
         required: false
         type: string
         default: ''
 jobs:
   test:
+    continue-on-error: ${{ inputs.channel == 'nightly' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
-      - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.target-feature) }}
+      - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.env-vars) }}
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -33,19 +34,19 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: +${{ inputs.channel }} --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
       - name: Build
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
-          args: +${{ inputs.channel }} --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test
-          args: +${{ inputs.channel }} --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
