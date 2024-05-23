@@ -82,7 +82,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target ${{ matrix.impl.target }} --features=nightly --no-deps --frozen
+          args: --target ${{ matrix.impl.target }} --features=nightly --no-deps
 
   test-x86:
     strategy:
