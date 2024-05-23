@@ -12,6 +12,7 @@ on:
         required: false
         type: string
         default: ''
+
 jobs:
   test:
     continue-on-error: ${{ inputs.channel == 'nightly' }}

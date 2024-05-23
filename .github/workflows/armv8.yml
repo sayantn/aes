@@ -1,0 +1,24 @@
+name: ARMv8 Test
+on:
+  workflow_call:
+    inputs:
+      target:
+        required: true
+        type: string
+      target-in-caps:
+        required: true
+        type: string
+
+jobs:
+  test-software:
+    uses: ./.github/workflows/other.yml
+    with:
+      target: ${{ inputs.target }}
+
+  test-neon:
+    name: Test of Neon on ${{ inputs.target }}
+    uses: ./.github/workflows/runtest.yml
+    with:
+      target: ${{ inputs.target }}
+      channel: nightly
+      env-vars: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+v8,+aes', inputs.target-in-caps) }}

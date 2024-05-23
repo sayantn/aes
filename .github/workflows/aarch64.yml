@@ -1,4 +1,4 @@
-name: ARM Test
+name: AArch64 Test
 on:
   workflow_call:
     inputs:

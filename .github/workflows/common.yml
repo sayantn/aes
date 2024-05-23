@@ -32,51 +32,57 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          # Tier 1
-          - triple: x86_64-unknown-linux-gnu
-            caps: X86_64_UNKNOWN_LINUX_GNU
+          # 64-bit
+          - triple: x86_64-linux-android
+            caps: X86_64_LINUX_ANDROID
           - triple: x86_64-pc-windows-gnu
             caps: X86_64_PC_WINDOWS_GNU
-          - triple: x86_64-pc-windows-msvc
-            caps: X86_64_PC_WINDOWS_MSVC
-          - triple: x86_64-apple-darwin
-            caps: X86_64_APPLE_DARWIN
-          - triple: i686-unknown-linux-gnu
-            caps: I686_UNKNOWN_LINUX_GNU
+          - triple: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+          - triple: x86_64-unknown-linux-musl
+            caps: X86_64_UNKNOWN_LINUX_MUSL
+          # 32-bit
+          - triple: i686-linux-android
+            caps: I686_LINUX_ANDROID
           - triple: i686-pc-windows-gnu
             caps: I686_PC_WINDOWS_GNU
-          - triple: i686-pc-windows-msvc
-            caps: I686_PC_WINDOWS_MSVC
-          #Tier 2 with Host Tools
-          - triple: x86_64-unknown-freebsd
-            caps: X86_64_UNKNOWN_FREEBSD
-          - triple: x86_64-unknown-illumos
-            caps: X86_64_UNKNOWN_ILLUMOS
-          - target: x86_64-unknown-linux-musl
-            caps: X86_64_UNKNOWN_LINUX_MUSL
-          - target: x86_64-unknown-netbsd
-            caps: X86_64_UNKNOWN_NETBSD
+          - triple: i686-unknown-linux-gnu
+            caps: I686_UNKNOWN_LINUX_GNU
+          - triple: i586-unknown-linux-gnu
+            caps: I586_UNKNOWN_LINUX_GNU
+          - triple: i586-unknown-linux-musl
+            caps: I586_UNKNOWN_LINUX_MUSL
     uses: ./.github/workflows/x86.yml
     with:
       target: ${{ matrix.target.triple }}
       target-in-caps: ${{ matrix.target.caps }}
 
-  test-arm:
+  test-aarch64:
     strategy:
       fail-fast: false
       matrix:
         target:
-          # Tier 1
+          - triple: aarch64-linux-android
+            caps: AARCH64_LINUX_ANDROID
           - triple: aarch64-unknown-linux-gnu
             caps: AARCH64_UNKNOWN_LINUX_GNU
-          # Tier 2 with Host Tools
-          - triple: aarch64-apple-darwin
-            caps: AARCH64_APPLE_DARWIN
-          - triple: aarch64-pc-windows-msvc
-            caps: AARCH64_PC_WINDOWS_MSVC
           - triple: aarch64-unknown-linux-musl
             caps: AARCH64_UNKNOWN_LINUX_MUSL
-    uses: ./.github/workflows/arm.yml
+    uses: ./.github/workflows/aarch64.yml
+    with:
+      target: ${{ matrix.target.triple }}
+      target-in-caps: ${{ matrix.target.caps }}
+
+  test-armv8:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - triple: thumbv7neon-linux-androideabi
+            caps: THUMBV7NEON_LINUX_ANDROIDEABI
+          - triple: thumbv7neon-unknown-linux-gnueabihf
+            caps: THUMBV7NEON_UNKNOWN_LINUX_GNUEABIHF
+    uses: ./.github/workflows/armv8.yml
     with:
       target: ${{ matrix.target.triple }}
       target-in-caps: ${{ matrix.target.caps }}
@@ -86,7 +92,6 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          # Tier 2 with Host Tools
           - triple: riscv64gc-unknown-linux-gnu
             caps: RISCV64GC_UNKNOWN_LINUX_GNU
     uses: ./.github/workflows/riscv.yml
@@ -99,15 +104,32 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          # Tier 2 with Host Tools
+          - arm-linux-androideabi
           - arm-unknown-linux-gnueabi
           - arm-unknown-linux-gnueabihf
+          - arm-unknown-linux-musleabi
+          - arm-unknown-linux-musleabihf
+          - armv5te-unknown-linux-gnueabi
+          - armv5te-unknown-linux-musleabi
+          - armv7-linux-androideabi
+          - armv7-unknown-linux-gnueabi
           - armv7-unknown-linux-gnueabihf
+          - armv7-unknown-linux-musleabi
+          - armv7-unknown-linux-musleabihf
           - loongarch64-unknown-linux-gnu
+          - mips-unknown-linux-gnu
+          - mips-unknown-linux-musl
+          - mips64-unknown-linux-gnuabi64
+          - mips64-unknown-linux-muslabi64
+          - mipsel-unknown-linux-gnu
+          - mipsel-unknown-linux-musl
+          - mips64el-unknown-linux-gnuabi64
+          - mips64el-unknown-linux-muslabi64
           - powerpc-unknown-linux-gnu
           - powerpc64-unknown-linux-gnu
           - powerpc64le-unknown-linux-gnu
-          - s390x-unknown-linux-gnu
+          - sparc64-unknown-linux-gnu
+          - wasm32-unknown-emscripten
     uses: ./.github/workflows/other.yml
     with:
       target: ${{ matrix.target }}
