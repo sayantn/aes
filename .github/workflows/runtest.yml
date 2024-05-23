@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: ${{ format('echo "{0} -C panic=abort" >> $GITHUB_ENV', inputs.env-vars) }}
+      - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.env-vars) }}
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1

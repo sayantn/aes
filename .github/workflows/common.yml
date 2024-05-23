@@ -90,19 +90,11 @@ jobs:
       matrix:
         target:
           # 64-bit
-          - triple: x86_64-linux-android
-            caps: X86_64_LINUX_ANDROID
-          - triple: x86_64-pc-windows-gnu
-            caps: X86_64_PC_WINDOWS_GNU
           - triple: x86_64-unknown-linux-gnu
             caps: X86_64_UNKNOWN_LINUX_GNU
           - triple: x86_64-unknown-linux-musl
             caps: X86_64_UNKNOWN_LINUX_MUSL
           # 32-bit
-          - triple: i686-linux-android
-            caps: I686_LINUX_ANDROID
-          - triple: i686-pc-windows-gnu
-            caps: I686_PC_WINDOWS_GNU
           - triple: i686-unknown-linux-gnu
             caps: I686_UNKNOWN_LINUX_GNU
           - triple: i586-unknown-linux-gnu
@@ -119,8 +111,6 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - triple: aarch64-linux-android
-            caps: AARCH64_LINUX_ANDROID
           - triple: aarch64-unknown-linux-gnu
             caps: AARCH64_UNKNOWN_LINUX_GNU
           - triple: aarch64-unknown-linux-musl
