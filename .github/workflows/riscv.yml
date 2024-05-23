@@ -21,4 +21,4 @@ jobs:
     with:
       target: ${{ inputs.target }}
       channel: nightly
-      env-vars: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+zkne,+zknd', inputs.target-in-caps) }}
+      env-vars: ${{ format('CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature=+zkne,+zknd', inputs.target-in-caps) }}

@@ -17,7 +17,6 @@ jobs:
 
   test-aesni:
     strategy:
-      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
     name: Test of AESNI on ${{ inputs.target }} with ${{ matrix.channel }}
@@ -25,7 +24,7 @@ jobs:
     with:
       target: ${{ inputs.target }}
       channel: ${{ matrix.channel }}
-      env-vars: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+sse4.1,+aes', inputs.target-in-caps) }}
+      env-vars: ${{ format('CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature=+sse4.1,+aes', inputs.target-in-caps) }}
 
   test-aesni-vaes:
     name: Test of AESNI with VAES on ${{ inputs.target }}
@@ -33,7 +32,7 @@ jobs:
     with:
       target: ${{ inputs.target }}
       channel: nightly
-      env-vars: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+vaes', inputs.target-in-caps) }}
+      env-vars: ${{ format('CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature=+vaes', inputs.target-in-caps) }}
 
   test-aesni-vaes-avx512f:
     name: Test of AESNI with VAES and AVX-512 on ${{ inputs.target }}
@@ -41,4 +40,4 @@ jobs:
     with:
       target: ${{ inputs.target }}
       channel: nightly
-      env-vars: ${{ format('CROSS_TARGET_{0}_RUSTFLAGS=+vaes,+avx512f', inputs.target-in-caps) }}
+      env-vars: ${{ format('CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature=+vaes,+avx512f', inputs.target-in-caps) }}
