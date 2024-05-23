@@ -68,9 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - triple: powerpc64-unknown-linux-gnu
-            caps: POWERPC64_UNKNOWN_LINUX_GNU
+          - powerpc64-unknown-linux-gnu
     uses: ./.github/workflows/other.yml
     with:
-      target: ${{ matrix.target.triple }}
-      target-in-caps: ${{ matrix.target.caps }}
+      target: ${{ matrix.target }}
