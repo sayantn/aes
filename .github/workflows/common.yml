@@ -135,23 +135,12 @@ jobs:
       target: ${{ matrix.target.triple }}
       target-in-caps: ${{ matrix.target.caps }}
 
-  test-riscv:
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - triple: riscv64gc-unknown-linux-gnu
-            caps: RISCV64GC_UNKNOWN_LINUX_GNU
-    uses: ./.github/workflows/riscv.yml
-    with:
-      target: ${{ matrix.target.triple }}
-      target-in-caps: ${{ matrix.target.caps }}
-
   test-other:
     strategy:
       fail-fast: false
       matrix:
         target:
+          - riscv64gc-unknown-linux-gnu
           - arm-linux-androideabi
           - arm-unknown-linux-gnueabi
           - arm-unknown-linux-gnueabihf
@@ -184,7 +173,7 @@ jobs:
           - mipsel-unknown-linux-musl
           - mips64el-unknown-linux-gnuabi64
           - mips64el-unknown-linux-muslabi64
-    name: Test of Software AES on ${{ matrix.target }} with nightly and build-std
+    name: Test of Software AES on ${{ matrix.target }} with build-std
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
