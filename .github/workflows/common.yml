@@ -170,7 +170,7 @@ jobs:
     with:
       target: ${{ matrix.target }}
 
-  test-nightly-only:
+  test-build-std:
     # These environments have cross support, but don't have rust-std, so cross has to build core, so, nightly-only
     strategy:
       fail-fast: false
@@ -189,3 +189,4 @@ jobs:
     with:
       target: ${{ matrix.target }}
       channel: nightly
+      build-std: true

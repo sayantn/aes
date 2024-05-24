@@ -12,7 +12,7 @@ on:
         required: false
         type: string
         default: ''
-      maxed-cpu:
+      build-std:
         required: false
         type: boolean
         default: false
@@ -43,7 +43,7 @@ jobs:
 
       - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.env-vars) }}
 
-      - run: echo "CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER=qemu-user -cpu max" >> $GITHUB_ENV
+      - run: echo "CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER=qemu-riscv64 -cpu max" >> $GITHUB_ENV
 
       # Install cross via cargo-binstall to save time
       - uses: cargo-bins/cargo-binstall@main
@@ -57,11 +57,11 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }} ${{ inputs.build-std && '-Z build-std=core' || '' }}
 
       - name: Test
         uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }} ${{ inputs.build-std && '-Z build-std=core' || '' }}
