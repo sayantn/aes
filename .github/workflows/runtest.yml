@@ -12,6 +12,10 @@ on:
         required: false
         type: string
         default: ''
+      maxed-cpu:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   test:
@@ -29,28 +33,34 @@ jobs:
           toolchain: ${{ inputs.channel }}
           profile: minimal
           override: true
-        if: inputs.channel != nightly
+        if: inputs.channel != 'nightly'
 
       # the nightly 2024-05-18 has a bug where it is not understanding -fuse-ld=lld
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2024-05-11
+          toolchain: nightly-2024-05-04
           profile: minimal
           override: true
         if: inputs.channel == 'nightly'
 
       - run: ${{ format('echo "{0}" >> $GITHUB_ENV', inputs.env-vars) }}
 
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+      - run: echo "CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_RUNNER=qemu-user -cpu max" >> $GITHUB_ENV
 
       # Install cross via cargo-binstall to save time
       - uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall cross
+      - uses: actions-rs/cargo@v1
+        with:
+          command: binstall
+          args: cross
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
 
       - name: Test
         uses: actions-rs/cargo@v1
