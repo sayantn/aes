@@ -50,7 +50,7 @@ jobs:
           command: binstall
           args: cross -y
 
-      - run: sudo apt install gcc-multilib
+      - run: sudo apt install gcc-multilib-mips64-linux-gnuabi64
         if: contains(inputs.target, 'muslabi64')
 
       - name: Build
