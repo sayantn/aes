@@ -50,6 +50,9 @@ jobs:
           command: binstall
           args: cross -y
 
+      - run: sudo apt install gcc-multilib
+        if: contains(inputs.target, 'muslabi64')
+
       - name: Build
         uses: actions-rs/cargo@v1
         with:
