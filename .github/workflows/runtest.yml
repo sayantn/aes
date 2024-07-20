@@ -1,0 +1,40 @@
+name: Run Test
+on:
+  workflow_call:
+    inputs:
+      arch:
+        required: true
+        type: string
+      target:
+        required: true
+        type: string
+      channel:
+        required: true
+        type: string
+      target-features:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ inputs.channel }}
+          default: true
+          target: ${{ inputs.target }}
+
+      - run: echo "RUSTFLAGS=-C target-feature=${{ inputs.target-features }}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Test
+        run: |
+          chmod 777 ./ci/run-docker.sh
+          ./ci/run-docker.sh ${{ inputs.arch }} ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+        shell: bash
