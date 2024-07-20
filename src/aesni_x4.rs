@@ -4,19 +4,18 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
-use cfg_if::cfg_if;
-
 use crate::aes_x86::AesBlock;
 use crate::aesni_x2::AesBlockX2;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
+#[must_use]
 pub struct AesBlockX4(__m512i);
 
 impl PartialEq for AesBlockX4 {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        unsafe { _mm512_cmpeq_epi64_mask(self.0, other.0) == 0b01010101 }
+        unsafe { _mm512_cmpeq_epi64_mask(self.0, other.0) == 0b1111_1111 }
     }
 }
 
@@ -31,6 +30,7 @@ impl From<[u8; 64]> for AesBlockX4 {
 
 impl From<(AesBlock, AesBlock, AesBlock, AesBlock)> for AesBlockX4 {
     #[inline]
+    #[allow(clippy::many_single_char_names)]
     fn from((a, b, c, d): (AesBlock, AesBlock, AesBlock, AesBlock)) -> Self {
         unsafe {
             let p = _mm256_inserti128_si256::<1>(_mm256_castsi128_si256(a.0), b.0);
@@ -142,29 +142,30 @@ impl AesBlockX4 {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_zero(self) -> bool {
         unsafe { _mm512_test_epi64_mask(self.0, self.0) == 0 }
     }
 
-    /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
+    /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(unsafe { _mm512_aesenc_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(unsafe { _mm512_aesdec_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
+    /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm512_aesenclast_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
+    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm512_aesdeclast_epi128(self.0, round_key.0) })

@@ -1,7 +1,9 @@
+#![allow(clippy::unreadable_literal, clippy::cast_possible_truncation)]
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C, align(16))]
+#[must_use]
 pub struct AesBlock(u32, u32, u32, u32);
 
 #[inline(always)]
@@ -104,11 +106,12 @@ impl AesBlock {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_zero(self) -> bool {
         (self.0 | self.1 | self.2 | self.3) == 0
     }
 
-    /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
+    /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(
@@ -119,7 +122,7 @@ impl AesBlock {
         )
     }
 
-    /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
+    /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
         Self(
@@ -146,7 +149,7 @@ impl AesBlock {
         )
     }
 
-    /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(
@@ -157,7 +160,7 @@ impl AesBlock {
         )
     }
 
-    /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
+    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(
@@ -184,7 +187,7 @@ impl AesBlock {
         )
     }
 
-    /// Performs the MixColumns operation
+    /// Performs the `MixColumns` operation
     #[inline]
     pub fn mc(self) -> Self {
         Self(
@@ -207,7 +210,7 @@ impl AesBlock {
         )
     }
 
-    /// Performs the InvMixColumns operation
+    /// Performs the `InvMixColumn`s operation
     #[inline]
     pub fn imc(self) -> Self {
         Self(

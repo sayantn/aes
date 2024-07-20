@@ -4,6 +4,7 @@ use crate::{array_from_slice, AesBlock, AesBlockX2};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C, align(32))]
+#[must_use]
 pub struct AesBlockX4(AesBlockX2, AesBlockX2);
 
 impl From<[u8; 64]> for AesBlockX4 {
@@ -115,29 +116,30 @@ impl AesBlockX4 {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_zero(self) -> bool {
         self.0.is_zero() & self.1.is_zero()
     }
 
-    /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
+    /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(self.0.enc(round_key.0), self.1.enc(round_key.1))
     }
 
-    /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(self.0.dec(round_key.0), self.1.dec(round_key.1))
     }
 
-    /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
+    /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
         Self(self.0.enc_last(round_key.0), self.1.enc_last(round_key.1))
     }
 
-    /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
+    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(self.0.dec_last(round_key.0), self.1.dec_last(round_key.1))

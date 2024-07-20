@@ -8,6 +8,7 @@ use crate::aes_x86::AesBlock;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
+#[must_use]
 pub struct AesBlockX2(pub(super) __m256i);
 
 impl PartialEq for AesBlockX2 {
@@ -105,29 +106,30 @@ impl AesBlockX2 {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_zero(self) -> bool {
         unsafe { _mm256_testz_si256(self.0, self.0) == 1 }
     }
 
-    /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
+    /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesenc_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesdec_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
+    /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesenclast_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
+    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesdeclast_epi128(self.0, round_key.0) })
