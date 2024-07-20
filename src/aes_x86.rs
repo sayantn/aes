@@ -6,6 +6,7 @@ use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
+#[must_use]
 pub struct AesBlock(pub(super) __m128i);
 
 impl PartialEq for AesBlock {
@@ -79,35 +80,36 @@ impl AesBlock {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_zero(self) -> bool {
         unsafe { _mm_testz_si128(self.0, self.0) == 1 }
     }
 
-    /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
+    /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         Self(unsafe { _mm_aesenc_si128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(unsafe { _mm_aesdec_si128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
+    /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm_aesenclast_si128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
+    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm_aesdeclast_si128(self.0, round_key.0) })
     }
 
-    /// Performs the MixColumns operation
+    /// Performs the `MixColumns` operation
     #[inline]
     pub fn mc(self) -> Self {
         Self(unsafe {
@@ -118,7 +120,7 @@ impl AesBlock {
         })
     }
 
-    /// Performs the InvMixColumns operation
+    /// Performs the `InvMixColumn`s operation
     #[inline]
     pub fn imc(self) -> Self {
         Self(unsafe { _mm_aesimc_si128(self.0) })

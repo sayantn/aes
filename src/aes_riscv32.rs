@@ -1,41 +1,40 @@
-use core::arch::asm;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 use core::{mem, slice};
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 #[repr(C, align(16))]
+#[must_use]
 pub struct AesBlock(u32, u32, u32, u32);
 
-macro_rules! _asm {
-    ($instruction:expr, $idx:literal, $rsd:ident, $rs:expr) => {
-        asm!(
-            concat!($instruction, "i {rd},{rs1},{rs2},", $idx),
-            rd = lateout(reg) $rsd,
-            rs1 = in(reg) $rsd,
-            rs2 = in(reg) $rs,
-            options(pure, nomem, nostack)
-        )
-    };
+extern "unadjusted" {
+    #[link_name = "llvm.riscv.aes32esmi"]
+    fn aes32esmi(rs1: u32, rs2: u32, bs: u32) -> u32;
+    #[link_name = "llvm.riscv.aes32esi"]
+    fn aes32esi(rs1: u32, rs2: u32, bs: u32) -> u32;
+    #[link_name = "llvm.riscv.aes32dsmi"]
+    fn aes32dsmi(rs1: u32, rs2: u32, bs: u32) -> u32;
+    #[link_name = "llvm.riscv.aes32dsi"]
+    fn aes32dsi(rs1: u32, rs2: u32, bs: u32) -> u32;
 }
 
 macro_rules! outer {
     ($name:ident, $msg:ident, $rk:ident) => {{
         #[inline(always)]
-        fn $name(t0: u32, t1: u32, t2: u32, t3: u32, rk: u32) -> u32 {
+        fn inner(t0: u32, t1: u32, t2: u32, t3: u32, rk: u32) -> u32 {
             let mut value = rk;
             unsafe {
-                _asm!(stringify!($name), 0, value, t0);
-                _asm!(stringify!($name), 1, value, t1);
-                _asm!(stringify!($name), 2, value, t2);
-                _asm!(stringify!($name), 3, value, t3);
+                value = $name(value, t0, 0);
+                value = $name(value, t1, 1);
+                value = $name(value, t2, 2);
+                value = $name(value, t3, 3);
             }
             value
         }
         AesBlock(
-            $name($msg.0, $msg.1, $msg.2, $msg.3, $rk.0),
-            $name($msg.1, $msg.2, $msg.3, $msg.0, $rk.1),
-            $name($msg.2, $msg.3, $msg.0, $msg.1, $rk.2),
-            $name($msg.3, $msg.0, $msg.1, $msg.2, $rk.3),
+            inner($msg.0, $msg.1, $msg.2, $msg.3, $rk.0),
+            inner($msg.1, $msg.2, $msg.3, $msg.0, $rk.1),
+            inner($msg.2, $msg.3, $msg.0, $msg.1, $rk.2),
+            inner($msg.3, $msg.0, $msg.1, $msg.2, $rk.3),
         )
     }};
 }
@@ -107,7 +106,9 @@ impl AesBlock {
     #[inline]
     pub fn store_to(self, dst: &mut [u8]) {
         assert!(dst.len() >= 16);
-        unsafe { *dst.as_mut_ptr().cast::<[u8; 16]>() = mem::transmute(self) }
+        unsafe {
+            dst.as_mut_ptr().cast::<Self>().write_unaligned(self);
+        }
     }
 
     #[inline]
@@ -116,16 +117,17 @@ impl AesBlock {
     }
 
     #[inline]
+    #[must_use]
     pub fn is_zero(self) -> bool {
         (self.0 | self.1 | self.2 | self.3) == 0
     }
 
     #[inline(always)]
     pub(crate) fn pre_enc(self, round_key: Self) -> Self {
-        outer!(aes32esm, self, round_key)
+        outer!(aes32esmi, self, round_key)
     }
 
-    /// Performs one round of AES encryption function (ShiftRows->SubBytes->MixColumns->AddRoundKey)
+    /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
         self.pre_enc(Self::zero()) ^ round_key
@@ -133,10 +135,10 @@ impl AesBlock {
 
     #[inline(always)]
     pub(crate) fn pre_enc_last(self, round_key: Self) -> Self {
-        outer!(aes32es, self, round_key)
+        outer!(aes32esi, self, round_key)
     }
 
-    /// Performs one round of AES encryption function without MixColumns (ShiftRows->SubBytes->AddRoundKey)
+    /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
         self.pre_enc_last(Self::zero()) ^ round_key
@@ -144,10 +146,10 @@ impl AesBlock {
 
     #[inline(always)]
     pub(crate) fn pre_dec(self, round_key: Self) -> Self {
-        outer!(aes32dsm, self, round_key)
+        outer!(aes32dsmi, self, round_key)
     }
 
-    /// Performs one round of AES decryption function (InvShiftRows->InvSubBytes->InvMixColumns->AddRoundKey)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         self.pre_dec(Self::zero()) ^ round_key
@@ -155,22 +157,22 @@ impl AesBlock {
 
     #[inline(always)]
     pub(crate) fn pre_dec_last(self, round_key: Self) -> Self {
-        outer!(aes32ds, self, round_key)
+        outer!(aes32dsi, self, round_key)
     }
 
-    /// Performs one round of AES decryption function without InvMixColumns (InvShiftRows->InvSubBytes->AddRoundKey)
+    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         self.pre_dec_last(Self::zero()) ^ round_key
     }
 
-    /// Performs the MixColumns operation
+    /// Performs the `MixColumns` operation
     #[inline]
     pub fn mc(self) -> Self {
         self.pre_dec_last(Self::zero()).enc(Self::zero())
     }
 
-    /// Performs the InvMixColumns operation
+    /// Performs the `InvMixColumn`s operation
     #[inline]
     pub fn imc(self) -> Self {
         self.pre_enc_last(Self::zero()).dec(Self::zero())
@@ -183,10 +185,10 @@ const RCON: [u32; 10] = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0
 fn sub_word(xor: u32, word: u32) -> u32 {
     let mut value = xor;
     unsafe {
-        _asm!("aes32es", 0, value, word);
-        _asm!("aes32es", 1, value, word);
-        _asm!("aes32es", 2, value, word);
-        _asm!("aes32es", 3, value, word);
+        value = aes32esi(value, word, 0);
+        value = aes32esi(value, word, 1);
+        value = aes32esi(value, word, 2);
+        value = aes32esi(value, word, 3);
     }
     value
 }

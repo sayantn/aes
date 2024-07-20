@@ -17,6 +17,24 @@
     ),
     feature(stdarch_arm_neon_intrinsics)
 )]
+#![cfg_attr(
+    all(
+        feature = "nightly",
+        any(target_arch = "riscv32", target_arch = "riscv64"),
+        target_feature = "zkne",
+        target_feature = "zknd"
+    ),
+    feature(link_llvm_intrinsics, abi_unadjusted)
+)]
+#![allow(
+    internal_features,
+    clippy::identity_op,
+    clippy::inline_always,
+    clippy::similar_names,
+    clippy::doc_markdown,
+    clippy::missing_panics_doc,
+    clippy::wildcard_imports
+)]
 
 use core::fmt::{self, Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 use core::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
@@ -103,7 +121,7 @@ mod tests;
 #[inline(always)]
 fn try_from_slice<const N: usize, T: From<[u8; N]>>(value: &[u8]) -> Result<T, usize> {
     if value.len() >= N {
-        Ok(unsafe { (*(value.as_ptr() as *const [u8; N])).into() })
+        Ok(array_from_slice(value, 0).into())
     } else {
         Err(value.len())
     }
@@ -113,7 +131,7 @@ fn try_from_slice<const N: usize, T: From<[u8; N]>>(value: &[u8]) -> Result<T, u
 #[inline(always)]
 const fn array_from_slice<const N: usize>(value: &[u8], offset: usize) -> [u8; N] {
     debug_assert!(value.len() - offset >= N);
-    unsafe { *(value.as_ptr().add(offset) as *const [u8; N]) }
+    unsafe { *value.as_ptr().add(offset).cast() }
 }
 
 impl Default for AesBlock {
@@ -205,7 +223,7 @@ impl Binary for AesBlock {
             f.write_str("0b")?;
         }
         for digit in <[u8; 16]>::from(*self) {
-            write!(f, "{:>08b}", digit)?;
+            write!(f, "{digit:>08b}")?;
         }
         Ok(())
     }
