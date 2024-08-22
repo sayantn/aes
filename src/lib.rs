@@ -1,31 +1,8 @@
 #![doc = include_str!("../README.md")]
 #![no_std]
-#![cfg_attr(
-    all(
-        feature = "nightly",
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "vaes"
-    ),
-    feature(stdarch_x86_avx512)
-)]
-#![cfg_attr(
-    all(
-        feature = "nightly",
-        target_arch = "arm",
-        target_feature = "v8",
-        target_feature = "aes"
-    ),
-    feature(stdarch_arm_neon_intrinsics)
-)]
-#![cfg_attr(
-    all(
-        feature = "nightly",
-        any(target_arch = "riscv32", target_arch = "riscv64"),
-        target_feature = "zkne",
-        target_feature = "zknd"
-    ),
-    feature(link_llvm_intrinsics, abi_unadjusted)
-)]
+#![cfg_attr(aes_x2_impl = "vaes", feature(stdarch_x86_avx512))]
+#![cfg_attr(aes_impl = "arm-neon", feature(stdarch_arm_neon_intrinsics))]
+#![cfg_attr(aes_impl = "risc-v", feature(link_llvm_intrinsics, abi_unadjusted))]
 #![allow(
     internal_features,
     clippy::identity_op,
@@ -41,79 +18,30 @@ use core::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 
 use cfg_if::cfg_if;
 
-cfg_if! {
-    if #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse4.1",
-        target_feature = "aes",
-    ))] {
-        mod aes_x86;
-        pub use aes_x86::AesBlock;
-        use aes_x86::*;
-    } else if #[cfg(all(
-        any(
-            target_arch = "aarch64",
-            target_arch = "arm64ec",
-            all(feature = "nightly", target_arch = "arm", target_feature = "v8")
-        ),
-        target_feature = "aes"
-    ))] {
-        mod aes_arm;
-        pub use aes_arm::AesBlock;
-        use aes_arm::*;
-    } else if #[cfg(all(
-        feature = "nightly",
-        target_arch = "riscv64",
-        target_feature = "zkne",
-        target_feature = "zknd"
-    ))] {
-        mod aes_riscv64;
-        pub use aes_riscv64::AesBlock;
-        use aes_riscv64::*;
-    } else if #[cfg(all(
-        feature = "nightly",
-        target_arch = "riscv32",
-        target_feature = "zkne",
-        target_feature = "zknd"
-    ))] {
-        mod aes_riscv32;
-        pub use aes_riscv32::AesBlock;
-        use aes_riscv32::*;
-    } else {
-        mod aes_default;
-        pub use aes_default::AesBlock;
-        use aes_default::*;
-    }
-}
+pub use low::AesBlock;
+pub use low_x2::AesBlockX2;
+pub use low_x4::AesBlockX4;
 
-cfg_if! {
-    if #[cfg(all(
-        feature = "nightly",
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "vaes"
-    ))] {
-        mod aesni_x2;
-        pub use aesni_x2::AesBlockX2;
-    } else {
-        mod aesdefault_x2;
-        pub use aesdefault_x2::AesBlockX2;
-    }
-}
+#[cfg_attr(aes_impl = "x86", path = "./aes_x86.rs")]
+#[cfg_attr(any(aes_impl = "neon", aes_impl = "arm-neon"), path = "./aes_arm.rs")]
+#[cfg_attr(
+    all(aes_impl = "risc-v", target_arch = "riscv32"),
+    path = "./aes_riscv32.rs"
+)]
+#[cfg_attr(
+    all(aes_impl = "risc-v", target_arch = "riscv64"),
+    path = "./aes_riscv64.rs"
+)]
+#[cfg_attr(aes_impl = "software", path = "./aes_default.rs")]
+mod low;
 
-cfg_if! {
-    if #[cfg(all(
-        feature = "nightly",
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "avx512f",
-        target_feature = "vaes"
-    ))] {
-        mod aesni_x4;
-        pub use aesni_x4::AesBlockX4;
-    } else {
-        mod aesdefault_x4;
-        pub use aesdefault_x4::AesBlockX4;
-    }
-}
+#[cfg_attr(aes_x2_impl = "vaes", path = "./aesni_x2.rs")]
+#[cfg_attr(aes_x2_impl = "tuple", path = "./aesdefault_x2.rs")]
+mod low_x2;
+
+#[cfg_attr(aes_x4_impl = "avx512f", path = "./aesni_x4.rs")]
+#[cfg_attr(aes_x4_impl = "tuple", path = "./aesdefault_x4.rs")]
+mod low_x4;
 
 #[cfg(test)]
 mod tests;
@@ -413,7 +341,7 @@ impl private::Sealed for Aes128Enc {}
 impl From<[u8; 16]> for Aes128Enc {
     fn from(value: [u8; 16]) -> Self {
         Aes128Enc {
-            round_keys: keygen_128(value),
+            round_keys: low::keygen_128(value),
         }
     }
 }
@@ -441,7 +369,7 @@ impl private::Sealed for Aes192Enc {}
 impl From<[u8; 24]> for Aes192Enc {
     fn from(value: [u8; 24]) -> Self {
         Aes192Enc {
-            round_keys: keygen_192(value),
+            round_keys: low::keygen_192(value),
         }
     }
 }
@@ -469,7 +397,7 @@ impl private::Sealed for Aes256Enc {}
 impl From<[u8; 32]> for Aes256Enc {
     fn from(value: [u8; 32]) -> Self {
         Aes256Enc {
-            round_keys: keygen_256(value),
+            round_keys: low::keygen_256(value),
         }
     }
 }
@@ -510,55 +438,9 @@ fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; 
 }
 
 cfg_if! {
-    if #[cfg(any(
-        all(
-            any(
-                target_arch = "aarch64",
-                target_arch = "arm64ec",
-                all(feature = "nightly", target_arch = "arm", target_feature = "v8")
-            ),
-            target_feature = "aes",
-        ), all(
-                feature = "nightly",
-                target_arch = "riscv32",
-                target_feature = "zkne",
-                target_feature = "zknd"
-        )))] {
-        macro_rules! aes_intr {
-            ($($name:ident),*) => {$(
-                impl $name {
-                    #[inline(always)]
-                    fn pre_enc(self, round_key:Self) -> Self {
-                        let (a, b) = self.into();
-                        let (rk0, rk1) = round_key.into();
-                        (a.pre_enc(rk0), b.pre_enc(rk1)).into()
-                    }
-
-                    #[inline(always)]
-                    fn pre_enc_last(self, round_key:Self) -> Self {
-                        let (a, b) = self.into();
-                        let (rk0, rk1) = round_key.into();
-                        (a.pre_enc_last(rk0), b.pre_enc_last(rk1)).into()
-                    }
-
-                    #[inline(always)]
-                    fn pre_dec(self, round_key:Self) -> Self {
-                        let (a, b) = self.into();
-                        let (rk0, rk1) = round_key.into();
-                        (a.pre_dec(rk0), b.pre_dec(rk1)).into()
-                    }
-
-                    #[inline(always)]
-                    fn pre_dec_last(self, round_key:Self) -> Self {
-                        let (a, b) = self.into();
-                        let (rk0, rk1) = round_key.into();
-                        (a.pre_dec_last(rk0), b.pre_dec_last(rk1)).into()
-                    }
-                }
-            )*};
-        }
-
-        aes_intr!(AesBlockX2, AesBlockX4);
+    if #[cfg(any(aes_impl = "neon", aes_impl = "arm-neon", all(aes_impl = "risc-v", target_arch = "riscv32")))] {
+        /// If the implementation of `pre_enc` is faster than `enc`
+        pub const FAST_PRE_ENC: bool = true;
 
         macro_rules! impl_aes {
             (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
@@ -577,6 +459,46 @@ cfg_if! {
             }};
         }
     } else {
+        /// If the implementation of `pre_enc` is faster than `enc`
+        pub const FAST_PRE_ENC: bool = false;
+
+        macro_rules! impl_pre {
+            ($type:ty) => {
+                impl $type {
+                    /// Performs the operation `AddRoundKey` -> `ShiftRows` -> `SubBytes` -> `MixColumns`
+                    #[inline(always)]
+                    pub fn pre_enc(self, key: Self) -> Self {
+                        (self ^ key).enc(Self::zero())
+                    }
+
+                    /// Performs the operation `AddRoundKey` -> `ShiftRows` -> `SubBytes`
+                    #[inline(always)]
+                    pub fn pre_enc_last(self, key: Self) -> Self {
+                        (self ^ key).enc_last(Self::zero())
+                    }
+
+                    /// Performs the operation `AddRoundKey` -> `InvShiftRows` -> `InvSubBytes` -> `InvMixColumns`
+                    #[inline(always)]
+                    pub fn pre_dec(self, key: Self) -> Self {
+                        (self ^ key).dec(Self::zero())
+                    }
+
+                    /// Performs the operation `AddRoundKey` -> `InvShiftRows` -> `InvSubBytes`
+                    #[inline(always)]
+                    pub fn pre_dec_last(self, key: Self) -> Self {
+                        (self ^ key).dec_last(Self::zero())
+                    }
+                }
+            };
+        }
+
+        impl_pre!(AesBlock);
+
+        #[cfg(aes_x2_impl = "vaes")]
+        impl_pre!(AesBlockX2);
+        #[cfg(aes_x4_impl = "avx512f")]
+        impl_pre!(AesBlockX4);
+
         macro_rules! impl_aes {
             (enc: $round_keys: expr, $plaintext: expr, $max:literal) => {{
                 let mut acc = $plaintext ^ $round_keys[0].into();
@@ -593,7 +515,7 @@ cfg_if! {
                 acc.dec_last($round_keys[$max].into())
             }};
         }
-}
+    }
 }
 
 impl AesEncrypt<16> for Aes128Enc {

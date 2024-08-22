@@ -112,13 +112,15 @@ impl AesBlock {
         }
     }
 
+    /// /// Performs the operation `AddRoundKey` -> `ShiftRows` -> `SubBytes`
     #[inline(always)]
-    pub(crate) fn pre_enc_last(self, round_key: Self) -> Self {
+    pub fn pre_enc_last(self, round_key: Self) -> Self {
         Self(unsafe { vaeseq_u8(self.0, round_key.0) })
     }
 
+    /// Performs the operation `AddRoundKey` -> `ShiftRows` -> `SubBytes` -> `MixColumns`
     #[inline(always)]
-    pub(crate) fn pre_enc(self, round_key: Self) -> Self {
+    pub fn pre_enc(self, round_key: Self) -> Self {
         self.pre_enc_last(round_key).mc()
     }
 
@@ -128,17 +130,19 @@ impl AesBlock {
         self.pre_enc(Self::zero()) ^ round_key
     }
 
+    /// Performs the operation `AddRoundKey` -> `InvShiftRows` -> `InvSubBytes`
     #[inline(always)]
-    pub(crate) fn pre_dec_last(self, round_key: Self) -> Self {
+    pub fn pre_dec_last(self, round_key: Self) -> Self {
         Self(unsafe { vaesdq_u8(self.0, round_key.0) })
     }
 
+    /// Performs the operation `AddRoundKey` -> `InvShiftRows` -> `InvSubBytes` -> `InvMixColumns`
     #[inline(always)]
-    pub(crate) fn pre_dec(self, round_key: Self) -> Self {
+    pub fn pre_dec(self, round_key: Self) -> Self {
         self.pre_dec_last(round_key).imc()
     }
 
-    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         self.pre_dec(Self::zero()) ^ round_key
@@ -150,7 +154,7 @@ impl AesBlock {
         self.pre_enc_last(Self::zero()) ^ round_key
     }
 
-    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
+    /// Performs one round of AES decryption function without `InvMixColumns` (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         self.pre_dec_last(Self::zero()) ^ round_key
@@ -162,7 +166,7 @@ impl AesBlock {
         Self(unsafe { vaesmcq_u8(self.0) })
     }
 
-    /// Performs the `InvMixColumn`s operation
+    /// Performs the `InvMixColumns` operation
     #[inline]
     pub fn imc(self) -> Self {
         Self(unsafe { vaesimcq_u8(self.0) })

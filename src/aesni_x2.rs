@@ -4,7 +4,7 @@ use core::arch::x86::*;
 use core::arch::x86_64::*;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
-use crate::aes_x86::AesBlock;
+use crate::AesBlock;
 
 #[derive(Copy, Clone)]
 #[repr(transparent)]
@@ -117,7 +117,7 @@ impl AesBlockX2 {
         Self(unsafe { _mm256_aesenc_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesdec_epi128(self.0, round_key.0) })
@@ -129,7 +129,7 @@ impl AesBlockX2 {
         Self(unsafe { _mm256_aesenclast_epi128(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
+    /// Performs one round of AES decryption function without `InvMixColumns` (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesdeclast_epi128(self.0, round_key.0) })
