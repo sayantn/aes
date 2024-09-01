@@ -15,6 +15,10 @@ on:
         required: false
         type: string
         default: ''
+      extra-features:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   test:
@@ -36,5 +40,5 @@ jobs:
       - name: Test
         run: |
           chmod 777 ./ci/run-docker.sh
-          ./ci/run-docker.sh ${{ inputs.arch }} ${{ inputs.target }} ${{ inputs.channel == 'nightly' && '--features=nightly' || '' }}
+          ./ci/run-docker.sh ${{ inputs.arch }} ${{ inputs.target }} ${{ inputs.extra-features }}
         shell: bash

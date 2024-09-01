@@ -28,6 +28,7 @@ const fn step_b(a: u128, mask: u128) -> u128 {
     (x | (x >> 1)) ^ ((a << 1) & mask)
 }
 
+#[allow(clippy::cast_possible_truncation)]
 const fn sub_word(x: u32) -> u32 {
     // Check if rustc is enough to optimize this
     subbytes(x as u128) as u32
@@ -155,9 +156,8 @@ const fn invsubbytes(x: u128) -> u128 {
     let y = ror1(y);
     let x = x ^ (y & rep(0xfb));
     let y = ror1(y);
-    let x = x ^ (y & rep(0x7d));
 
-    x
+    x ^ (y & rep(0x7d))
 }
 
 const fn shiftrows(state: [u8; 16]) -> [u8; 16] {

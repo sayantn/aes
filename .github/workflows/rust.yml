@@ -32,14 +32,21 @@ jobs:
             target: x86_64-unknown-linux-gnu
             caps: X86_64_UNKNOWN_LINUX_GNU
             target-features: +vaes
+            extra-features: --features=nightly
           - name: AES-NI with VAES and AVX-512
             target: x86_64-unknown-linux-gnu
             caps: X86_64_UNKNOWN_LINUX_GNU
             target-features: +vaes,+avx512f
+            extra-features: --features=nightly
           - name: Neon
             target: aarch64-unknown-linux-gnu
             caps: AARCH64_UNKNOWN_LINUX_GNU
             target-features: +aes
+          - name: ARMv8
+            target: armv7-unknown-linux-gnueabihf
+            caps: ARMV7_UNKNOWN_LINUX_GNUEABIHF
+            target-features: +v8,+aes
+            extra-features: --features=nightly
           - name: RV64
             target: riscv64gc-unknown-linux-gnu
             caps: RISCV64GC_UNKNOWN_LINUX_GNU
@@ -52,6 +59,11 @@ jobs:
             target: x86_64-unknown-linux-gnu
             caps: X86_64_UNKNOWN_LINUX_GNU
             target-features: ''
+          - name: Constant-Time
+            target: x86_64-unknown-linux-gnu
+            caps: X86_64_UNKNOWN_LINUX_GNU
+            target-features: ''
+            extra-features: --features=constant-time
     steps:
       - uses: actions/checkout@v3
 
@@ -67,7 +79,7 @@ jobs:
           override: true
 
       - name: Clippy Check
-        run: cargo clippy --target ${{ matrix.impl.target }} --features=nightly --no-deps -- -D clippy::pedantic
+        run: cargo clippy --target ${{ matrix.impl.target }} ${{ matrix.impl.extra-features }} --no-deps -- -D clippy::pedantic
 
   test-aesni:
     strategy:
@@ -89,6 +101,7 @@ jobs:
       target: x86_64-unknown-linux-gnu
       channel: nightly
       target-features: +vaes
+      extra-features: --features=nightly
 
   test-aesni-vaes-avx512:
     name: Test of AESNI with VAES and AVX512F
@@ -98,6 +111,7 @@ jobs:
       target: x86_64-unknown-linux-gnu
       channel: nightly
       target-features: +vaes,+avx512f
+      extra-features: --features=nightly
 
   test-neon:
     strategy:
@@ -118,7 +132,8 @@ jobs:
       arch: arm
       target: armv7-unknown-linux-gnueabihf
       channel: nightly
-      target-features: +aes
+      target-features: +v8,+aes
+      extra-features: --features=nightly
 
   test-riscv64:
     name: Test of RiscV-64
@@ -128,6 +143,7 @@ jobs:
       target: riscv64gc-unknown-linux-gnu
       channel: nightly
       target-features: +zkne,+zknd
+      extra-features: --features=nightly
 
   test-software:
     strategy:
@@ -139,3 +155,15 @@ jobs:
       arch: x86_64
       target: x86_64-unknown-linux-gnu
       channel: ${{ matrix.channel }}
+
+  test-constant-time:
+    strategy:
+      matrix:
+        channel: [ stable, beta, nightly ]
+    name: Test of Constant-time Implementation with ${{ matrix.channel }}
+    uses: ./.github/workflows/runtest.yml
+    with:
+      arch: x86_64
+      target: x86_64-unknown-linux-gnu
+      channel: ${{ matrix.channel }}
+      extra-features: --features=constant-time
