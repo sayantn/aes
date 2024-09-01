@@ -79,10 +79,14 @@ cfg_if! {
         mod aes_riscv32;
         pub use aes_riscv32::AesBlock;
         use aes_riscv32::*;
+    } else if #[cfg(feature = "constant-time")]{
+        mod aes_bitslice;
+        pub use aes_bitslice::AesBlock;
+        use aes_bitslice::*;
     } else {
-        mod aes_default;
-        pub use aes_default::AesBlock;
-        use aes_default::*;
+        mod aes_table_based;
+        pub use aes_table_based::AesBlock;
+        use aes_table_based::*;
     }
 }
 

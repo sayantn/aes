@@ -10,8 +10,10 @@ keywords = ["crypto", "aes", "rijndael", "no_std"]
 categories = ["cryptography", "no-std", "no-std::no-alloc"]
 
 [features]
-# Enable this option when using a nightly compiler to possibly boost performance. DO NOT use when not using a nightly compiler
+# Enable this option when using a nightly compiler to possibly boost performance. DO NOT use when not using a nightly compiler. EXPERIMENTAL
 nightly = []
+# This option makes the software AES implementation constant-time, but very slow. Has no effect if another implementation is selected
+constant-time = []
 
 [dependencies]
 cfg-if = "1.0.0"
