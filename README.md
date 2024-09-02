@@ -1,7 +1,7 @@
 This is a pure-Rust platform-agnostic [AES](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) library, that
 is focused on reusability and optimal performance.
 
-This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 6
+This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 7
 implementations, among which it automatically decides the best (most performant) using Cargo's `target_feature` flags.
 
 # The implementations and their requirements are:
@@ -19,6 +19,9 @@ implementations, among which it automatically decides the best (most performant)
   target-feature enabled)
 - Software AES => fallback implementation based on Rijmen and Daemen's `optimized` implementation (available
   on [their website](https://web.archive.org/web/20050828204927/http://www.iaik.tu-graz.ac.at/research/krypto/AES/old/%7Erijmen/rijndael/))
+- Constant-time Software AES => Much slower than Software AES, but is constant-time, which can be important in some scenarios.
+  Enabled by the `constant-time` feature. It is worth noting that all the accelerated AES implementations are constant-time, so this
+  only comes into play when no accelerated version is found)
 
 If you are unsure about the target_feature flags to set, use `target_cpu=native` (if not cross-compiling) in
 the `RUSTFLAGS` environment variable, and use the `nightly` feature only if you are using a nightly compiler.
