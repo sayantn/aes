@@ -113,7 +113,7 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub(crate) fn pre_enc_last(self, round_key: Self) -> Self {
+    fn pre_enc_last(self, round_key: Self) -> Self {
         Self(unsafe { vaeseq_u8(self.0, round_key.0) })
     }
 
@@ -129,7 +129,7 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub(crate) fn pre_dec_last(self, round_key: Self) -> Self {
+    fn pre_dec_last(self, round_key: Self) -> Self {
         Self(unsafe { vaesdq_u8(self.0, round_key.0) })
     }
 

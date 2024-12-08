@@ -134,7 +134,7 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub(crate) fn pre_enc_last(self, round_key: Self) -> Self {
+    fn pre_enc_last(self, round_key: Self) -> Self {
         outer!(aes32esi, self, round_key)
     }
 
@@ -156,7 +156,7 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    pub(crate) fn pre_dec_last(self, round_key: Self) -> Self {
+    fn pre_dec_last(self, round_key: Self) -> Self {
         outer!(aes32dsi, self, round_key)
     }
 
