@@ -1,3 +1,5 @@
+[![Actions Status](https://github.com/sayantn/aes/actions/workflows/rust.yml/badge.svg)](https://github.com/sayantn/aes/actions)
+
 This is a pure-Rust platform-agnostic [AES](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) library, that
 is focused on reusability and optimal performance.
 

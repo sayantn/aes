@@ -38,7 +38,5 @@ jobs:
         shell: bash
 
       - name: Test
-        run: |
-          chmod 777 ./ci/run-docker.sh
-          ./ci/run-docker.sh ${{ inputs.arch }} ${{ inputs.target }} ${{ inputs.extra-features }}
+        run: ./ci/run-docker.sh ${{ inputs.arch }} ${{ inputs.target }} ${{ inputs.extra-features }}
         shell: bash
