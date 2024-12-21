@@ -14,132 +14,82 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - run: rustup update --no-self-update
+
       - name: Rustfmt Check
         run: cargo fmt --all --check
 
-  clippy:
-    name: Clippy Check of ${{ matrix.impl.name }}
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        impl:
-          - name: AES-NI
-            target: x86_64-unknown-linux-gnu
-            caps: X86_64_UNKNOWN_LINUX_GNU
-            target-features: +sse4.1,+aes
-          - name: AES-NI with VAES
-            target: x86_64-unknown-linux-gnu
-            caps: X86_64_UNKNOWN_LINUX_GNU
-            target-features: +vaes
-            extra-features: --features=nightly
-          - name: AES-NI with VAES and AVX-512
-            target: x86_64-unknown-linux-gnu
-            caps: X86_64_UNKNOWN_LINUX_GNU
-            target-features: +vaes,+avx512f
-            extra-features: --features=nightly
-          - name: Neon
-            target: aarch64-unknown-linux-gnu
-            caps: AARCH64_UNKNOWN_LINUX_GNU
-            target-features: +aes
-          - name: ARMv8
-            target: armv7-unknown-linux-gnueabihf
-            caps: ARMV7_UNKNOWN_LINUX_GNUEABIHF
-            target-features: +v8,+aes
-            extra-features: --features=nightly
-          - name: RV64
-            target: riscv64gc-unknown-linux-gnu
-            caps: RISCV64GC_UNKNOWN_LINUX_GNU
-            target-features: +zkne,+zknd
-          - name: RV32
-            target: riscv32i-unknown-none-elf
-            caps: RISCV32I_UNKNOWN_NONE_ELF
-            target-features: +zkne,+zknd
-          - name: Software
-            target: x86_64-unknown-linux-gnu
-            caps: X86_64_UNKNOWN_LINUX_GNU
-            target-features: ''
-          - name: Constant-Time
-            target: x86_64-unknown-linux-gnu
-            caps: X86_64_UNKNOWN_LINUX_GNU
-            target-features: ''
-            extra-features: --features=constant-time
-    steps:
-      - uses: actions/checkout@v3
-
-      - run: ${{ format('echo "CARGO_TARGET_{0}_RUSTFLAGS=-C target-feature={1}" >> $GITHUB_ENV', matrix.impl.caps, matrix.impl.target-features) }}
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: ${{ matrix.impl.target }}
-          components: clippy
-          profile: minimal
-          override: true
-
-      - name: Clippy Check
-        run: cargo clippy --target ${{ matrix.impl.target }} ${{ matrix.impl.extra-features }} --no-deps -- -D clippy::pedantic
-
   test-aesni:
     strategy:
+      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
-    name: Test of AESNI with ${{ matrix.channel }}
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: x86_64
-      target: x86_64-unknown-linux-gnu
+      target: ${{ matrix.target }}
       channel: ${{ matrix.channel }}
       target-features: +sse4.1,+aes
 
   test-aesni-vaes:
-    name: Test of AESNI with VAES
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: x86_64
-      target: x86_64-unknown-linux-gnu
+      target: ${{ matrix.target }}
       channel: nightly
       target-features: +vaes
       extra-features: --features=nightly
 
   test-aesni-vaes-avx512:
-    name: Test of AESNI with VAES and AVX512F
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: x86_64
-      target: x86_64-unknown-linux-gnu
+      target: ${{ matrix.target }}
       channel: nightly
       target-features: +vaes,+avx512f
       extra-features: --features=nightly
 
   test-neon:
     strategy:
+      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
-    name: Test of Neon on AArch64 with ${{ matrix.channel }}
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: aarch64
       target: aarch64-unknown-linux-gnu
       channel: ${{ matrix.channel }}
       target-features: +aes
 
   test-armv8:
-    name: Test of Neon on ARMv8
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - armv7-unknown-linux-gnueabihf
+          - armv7-unknown-linux-gnueabi
+          - thumbv7neon-unknown-linux-gnueabihf
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: arm
       target: armv7-unknown-linux-gnueabihf
       channel: nightly
       target-features: +v8,+aes
       extra-features: --features=nightly
 
   test-riscv64:
-    name: Test of RiscV-64
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: riscv64
       target: riscv64gc-unknown-linux-gnu
       channel: nightly
       target-features: +zkne,+zknd
@@ -147,23 +97,28 @@ jobs:
 
   test-software:
     strategy:
+      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
-    name: Test of Software Implementation with ${{ matrix.channel }}
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - armv7-unknown-linux-gnueabi
+          - armv7-unknown-linux-gnueabihf
+          - thumbv7neon-unknown-linux-gnueabihf
+          - riscv64gc-unknown-linux-gnu
+          - powerpc-unknown-linux-gnu
+          - powerpc64-unknown-linux-gnu
+          - powerpc64le-unknown-linux-gnu
+          - s390x-unknown-linux-gnu
+          - i586-unknown-linux-gnu
+          - sparc64-unknown-linux-gnu
+        extra-features:
+          - ''
+          - --features=constant-time
     uses: ./.github/workflows/runtest.yml
     with:
-      arch: x86_64
-      target: x86_64-unknown-linux-gnu
+      target: ${{ matrix.target }}
       channel: ${{ matrix.channel }}
-
-  test-constant-time:
-    strategy:
-      matrix:
-        channel: [ stable, beta, nightly ]
-    name: Test of Constant-time Implementation with ${{ matrix.channel }}
-    uses: ./.github/workflows/runtest.yml
-    with:
-      arch: x86_64
-      target: x86_64-unknown-linux-gnu
-      channel: ${{ matrix.channel }}
-      extra-features: --features=constant-time
+      extra-features: ${{ matrix.extra-features }}
