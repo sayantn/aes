@@ -13,7 +13,8 @@
         feature = "nightly",
         target_arch = "arm",
         target_feature = "v8",
-        target_feature = "aes"
+        target_feature = "aes",
+        target_endian = "little" // https://github.com/rust-lang/stdarch/issues/1484
     ),
     feature(stdarch_arm_neon_intrinsics)
 )]
@@ -55,7 +56,8 @@ cfg_if! {
             target_arch = "arm64ec",
             all(feature = "nightly", target_arch = "arm", target_feature = "v8")
         ),
-        target_feature = "aes"
+        target_feature = "aes",
+        target_endian = "little" // https://github.com/rust-lang/stdarch/issues/1484
     ))] {
         mod aes_arm;
         pub use aes_arm::AesBlock;
