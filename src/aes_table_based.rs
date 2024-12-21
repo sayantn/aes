@@ -235,12 +235,12 @@ impl AesBlock {
 }
 
 #[inline(always)]
-fn keygenassist(x: u32) -> u32 {
+fn sub_word(x: u32) -> u32 {
     te4_0(x >> 16) | te4_1(x >> 8) | te4_2(x) | te4_3(x >> 24)
 }
 
 fn keyexp_128<const RCON: u32>(prev_rkey: AesBlock) -> AesBlock {
-    let k0 = prev_rkey.0 ^ keygenassist(prev_rkey.3) ^ RCON;
+    let k0 = prev_rkey.0 ^ sub_word(prev_rkey.3) ^ RCON;
     let k1 = prev_rkey.1 ^ k0;
     let k2 = prev_rkey.2 ^ k1;
     let k3 = prev_rkey.3 ^ k2;
@@ -248,7 +248,7 @@ fn keyexp_128<const RCON: u32>(prev_rkey: AesBlock) -> AesBlock {
 }
 
 fn keyexp_192<const RCON: u32>(prev: [u32; 6]) -> [u32; 6] {
-    let k0 = prev[0] ^ keygenassist(prev[5]) ^ RCON;
+    let k0 = prev[0] ^ sub_word(prev[5]) ^ RCON;
     let k1 = prev[1] ^ k0;
     let k2 = prev[2] ^ k1;
     let k3 = prev[3] ^ k2;
@@ -259,7 +259,7 @@ fn keyexp_192<const RCON: u32>(prev: [u32; 6]) -> [u32; 6] {
 }
 
 fn keyexp_256_1<const RCON: u32>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    let k0 = prev0.0 ^ keygenassist(prev1.3) ^ RCON;
+    let k0 = prev0.0 ^ sub_word(prev1.3) ^ RCON;
     let k1 = prev0.1 ^ k0;
     let k2 = prev0.2 ^ k1;
     let k3 = prev0.3 ^ k2;
@@ -267,7 +267,7 @@ fn keyexp_256_1<const RCON: u32>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
 }
 
 fn keyexp_256_2(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    let k0 = prev0.0 ^ keygenassist(prev1.3.rotate_right(8));
+    let k0 = prev0.0 ^ sub_word(prev1.3.rotate_right(8));
     let k1 = prev0.1 ^ k0;
     let k2 = prev0.2 ^ k1;
     let k3 = prev0.3 ^ k2;

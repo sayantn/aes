@@ -13,21 +13,7 @@ pub struct AesBlock(uint8x16_t);
 impl PartialEq for AesBlock {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        unsafe {
-            #[cfg(not(target_arch = "arm"))]
-            {
-                let result = vceqq_u64(vreinterpretq_u64_u8(self.0), vreinterpretq_u64_u8(other.0));
-                vgetq_lane_u64::<0>(result) != 0 && vgetq_lane_u64::<1>(result) != 0
-            }
-            #[cfg(target_arch = "arm")]
-            {
-                let result = vceqq_u32(vreinterpretq_u32_u8(self.0), vreinterpretq_u32_u8(other.0));
-                vgetq_lane_u32::<0>(result) != 0
-                    && vgetq_lane_u32::<1>(result) != 0
-                    && vgetq_lane_u32::<2>(result) != 0
-                    && vgetq_lane_u32::<3>(result) != 0
-            }
-        }
+        (*self ^ *other).is_zero()
     }
 }
 
@@ -99,27 +85,28 @@ impl AesBlock {
     pub fn is_zero(self) -> bool {
         #[cfg(not(target_arch = "arm"))]
         unsafe {
-            let result = vceqzq_u64(vreinterpretq_u64_u8(self.0));
-            vgetq_lane_u64::<0>(result) != 0 && vgetq_lane_u64::<1>(result) != 0
+            let a = vreinterpretq_u64_u8(self.0);
+            (vgetq_lane_u64::<0>(a) | vgetq_lane_u64::<1>(a)) == 0
         }
         #[cfg(target_arch = "arm")]
         unsafe {
-            let result = vceqq_u32(vreinterpretq_u32_u8(self.0), vdupq_n_u32(0));
-            vgetq_lane_u32::<0>(result) != 0
-                && vgetq_lane_u32::<1>(result) != 0
-                && vgetq_lane_u32::<2>(result) != 0
-                && vgetq_lane_u32::<3>(result) != 0
+            let a = vreinterpretq_u32_u8(self.0);
+            (vgetq_lane_u32::<0>(a)
+                | vgetq_lane_u32::<1>(a)
+                | vgetq_lane_u32::<2>(a)
+                | vgetq_lane_u32::<3>(a))
+                == 0
         }
     }
 
     #[inline(always)]
-    fn pre_enc_last(self, round_key: Self) -> Self {
+    fn aese(self, round_key: Self) -> Self {
         Self(unsafe { vaeseq_u8(self.0, round_key.0) })
     }
 
     #[inline(always)]
     pub(crate) fn pre_enc(self, round_key: Self) -> Self {
-        self.pre_enc_last(round_key).mc()
+        self.aese(round_key).mc()
     }
 
     /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
@@ -129,13 +116,13 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    fn pre_dec_last(self, round_key: Self) -> Self {
+    fn aesd(self, round_key: Self) -> Self {
         Self(unsafe { vaesdq_u8(self.0, round_key.0) })
     }
 
     #[inline(always)]
     pub(crate) fn pre_dec(self, round_key: Self) -> Self {
-        self.pre_dec_last(round_key).imc()
+        self.aesd(round_key).imc()
     }
 
     /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
@@ -147,13 +134,13 @@ impl AesBlock {
     /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
-        self.pre_enc_last(Self::zero()) ^ round_key
+        self.aese(Self::zero()) ^ round_key
     }
 
     /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
-        self.pre_dec_last(Self::zero()) ^ round_key
+        self.aesd(Self::zero()) ^ round_key
     }
 
     /// Performs the `MixColumns` operation
@@ -173,7 +160,7 @@ impl AesBlock {
 unsafe fn sub_word(input: u32) -> u32 {
     let input = vreinterpretq_u8_u32(vdupq_n_u32(input));
 
-    // AES single round encryption (with a "round" key of all zeros)
+    // AES single round encryption (with a round key of all zeros)
     let sub_input = vaeseq_u8(input, vdupq_n_u8(0));
 
     vgetq_lane_u32::<0>(vreinterpretq_u32_u8(sub_input))

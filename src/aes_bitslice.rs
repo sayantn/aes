@@ -160,18 +160,18 @@ const fn invsubbytes(x: u128) -> u128 {
     x ^ (y & rep(0x7d))
 }
 
-const fn shiftrows(state: [u8; 16]) -> [u8; 16] {
-    [
+const fn shiftrows(state: [u8; 16]) -> u128 {
+    u128::from_ne_bytes([
         state[0], state[5], state[10], state[15], state[4], state[9], state[14], state[3],
         state[8], state[13], state[2], state[7], state[12], state[1], state[6], state[11],
-    ]
+    ])
 }
 
-const fn invshiftrows(state: [u8; 16]) -> [u8; 16] {
-    [
+const fn invshiftrows(state: [u8; 16]) -> u128 {
+    u128::from_ne_bytes([
         state[0], state[13], state[10], state[7], state[4], state[1], state[14], state[11],
         state[8], state[5], state[2], state[15], state[12], state[9], state[6], state[3],
-    ]
+    ])
 }
 
 #[inline(always)]
@@ -301,37 +301,25 @@ impl AesBlock {
     /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
-        Self(subbytes(u128::from_ne_bytes(shiftrows(
-            self.0.to_ne_bytes(),
-        ))))
-        .mc()
-            ^ round_key
+        Self(subbytes(shiftrows(self.0.to_ne_bytes()))).mc() ^ round_key
     }
 
     /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
-        Self(invsubbytes(u128::from_ne_bytes(invshiftrows(
-            self.0.to_ne_bytes(),
-        ))))
-        .imc()
-            ^ round_key
+        Self(invsubbytes(invshiftrows(self.0.to_ne_bytes()))).imc() ^ round_key
     }
 
     /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
     #[inline]
     pub fn enc_last(self, round_key: Self) -> Self {
-        Self(subbytes(u128::from_ne_bytes(shiftrows(
-            self.0.to_ne_bytes(),
-        )))) ^ round_key
+        Self(subbytes(shiftrows(self.0.to_ne_bytes()))) ^ round_key
     }
 
     /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
-        Self(invsubbytes(u128::from_ne_bytes(invshiftrows(
-            self.0.to_ne_bytes(),
-        )))) ^ round_key
+        Self(invsubbytes(invshiftrows(self.0.to_ne_bytes()))) ^ round_key
     }
 
     /// Performs the `MixColumns` operation
