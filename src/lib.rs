@@ -80,7 +80,7 @@ cfg_if! {
         mod aes_riscv32;
         pub use aes_riscv32::AesBlock;
         use aes_riscv32::*;
-    } else if #[cfg(feature = "constant-time")]{
+    } else if #[cfg(all(feature = "constant-time", target_endian = "little"))]{
         mod aes_bitslice;
         pub use aes_bitslice::AesBlock;
         use aes_bitslice::*;
