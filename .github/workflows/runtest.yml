@@ -2,9 +2,6 @@ name: Run Test
 on:
   workflow_call:
     inputs:
-      arch:
-        required: true
-        type: string
       target:
         required: true
         type: string
@@ -33,10 +30,15 @@ jobs:
           toolchain: ${{ inputs.channel }}
           default: true
           target: ${{ inputs.target }}
+          components: clippy
 
       - run: echo "RUSTFLAGS=-C target-feature=${{ inputs.target-features }}" >> $GITHUB_ENV
-        shell: bash
+
+      - name: Clippy
+        run: cargo clippy --target ${{ inputs.target }} ${{ inputs.extra-features }} --no-deps -- -D clippy::pedantic
 
       - name: Test
-        run: ./ci/run-docker.sh ${{ inputs.arch }} ${{ inputs.target }} ${{ inputs.extra-features }}
-        shell: bash
+        run: ci/run-docker.sh ${{ inputs.target }} ${{ inputs.extra-features }}
+
+      - name: Doc
+        run: cargo doc --target ${{ inputs.target }} ${{ inputs.extra-features }} --no-deps
