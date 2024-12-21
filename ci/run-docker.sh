@@ -2,13 +2,13 @@
 
 set -ex
 
-if [ $# -lt 2 ]; then
-    >&2 echo "Usage: $0 <ARCH> <TARGET> [<FEATURE>]"
+if [ $# -lt 1 ]; then
+    >&2 echo "Usage: $0 <TARGET> [<EXTRA-ARGS>]*"
     exit 1
 fi
 
 echo "Building docker container for ${1}"
-docker build -t aes -f "ci/docker/${1}" ci/
+docker build -t aes -f "ci/docker/${1}/Dockerfile" ci/
 mkdir -p target
 echo "Running docker"
 docker run \
@@ -25,4 +25,4 @@ docker run \
   --workdir /checkout \
   --privileged \
   aes \
-  sh -c "HOME=/tmp PATH=\$PATH:/rust/bin exec cargo test --target ${2} ${3-}"
+  sh -c "HOME=/tmp PATH=\$PATH:/rust/bin exec cargo test --target ${1} $(shift 1; echo "$*") -- --nocapture"
