@@ -30,7 +30,7 @@ jobs:
           toolchain: ${{ inputs.channel }}
           default: true
           target: ${{ inputs.target }}
-          components: clippy
+          components: clippy,rust-src
 
       - run: echo "RUSTFLAGS=-C target-feature=${{ inputs.target-features }}" >> $GITHUB_ENV
 
