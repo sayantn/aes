@@ -95,6 +95,14 @@ jobs:
       target-features: +zkne,+zknd
       extra-features: --features=nightly
 
+  test-riscv32:
+    uses: ./.github/workflows/runtest.yml
+    with:
+      target: riscv32gc-unknown-linux-gnu
+      channel: nightly
+      target-features: +zkne,+zknd
+      extra-features: --features=nightly
+
   test-software:
     strategy:
       fail-fast: false
@@ -108,6 +116,7 @@ jobs:
           - armv7-unknown-linux-gnueabihf
           - thumbv7neon-unknown-linux-gnueabihf
           - riscv64gc-unknown-linux-gnu
+          - riscv32gc-unknown-linux-gnu
           - powerpc-unknown-linux-gnu
           - powerpc64-unknown-linux-gnu
           - powerpc64le-unknown-linux-gnu

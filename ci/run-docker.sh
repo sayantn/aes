@@ -10,7 +10,6 @@ fi
 echo "Building docker container for ${1}"
 docker build -t aes -f "ci/docker/${1}/Dockerfile" ci/
 mkdir -p target
-echo "Running docker"
 docker run \
   --rm \
   --user "$(id -u)":"$(id -g)" \
@@ -25,4 +24,4 @@ docker run \
   --workdir /checkout \
   --privileged \
   aes \
-  sh -c "HOME=/tmp PATH=\$PATH:/rust/bin exec cargo test --target ${1} $(shift 1; echo "$*") -- --nocapture"
+  sh -c "HOME=/tmp PATH=\$PATH:/rust/bin exec cargo test --target ${1} $(shift 1; echo "$*") \$EXTRA_ARGS -- --nocapture"
