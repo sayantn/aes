@@ -1,6 +1,6 @@
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
-use crate::{array_from_slice, AesBlock};
+use crate::{common::array_from_slice, AesBlock};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(C, align(32))]
