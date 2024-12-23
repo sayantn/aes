@@ -57,8 +57,7 @@ fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; 
 }
 
 cfg_if! {
-    if #[cfg(any(
-        all(
+    if #[cfg(all(
             any(
                 target_arch = "aarch64",
                 target_arch = "arm64ec",
@@ -66,12 +65,7 @@ cfg_if! {
             ),
             target_feature = "aes",
             target_endian = "little"
-        ), all(
-                feature = "nightly",
-                target_arch = "riscv32",
-                target_feature = "zkne",
-                target_feature = "zknd"
-        )))] {
+        ))] {
         macro_rules! impl_pre_encdec {
             ($($name:ident),*) => {$(
                 impl $name {
