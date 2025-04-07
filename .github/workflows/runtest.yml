@@ -24,13 +24,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ inputs.channel }}
-          default: true
-          target: ${{ inputs.target }}
-          components: clippy,rust-src
+        run: |
+          rustup update ${{ inputs.channel }}
+          rustup default ${{ inputs.channel }}
+          rustup component add clippy rust-src
+      
+      - name: Install target
+        run: |
+          rustup target add ${{ inputs.target }}
+        if: ${{ !contains(inputs.extra-features, 'build-std') }}
 
       - run: echo "RUSTFLAGS=-C target-feature=${{ inputs.target-features }}" >> $GITHUB_ENV
 

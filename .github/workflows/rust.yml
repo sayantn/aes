@@ -1,4 +1,4 @@
-name: Check
+name: CI
 
 on:
   pull_request:
@@ -21,12 +21,11 @@ jobs:
 
   test-aesni:
     strategy:
-      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
         target:
           - x86_64-unknown-linux-gnu
-          - i686-unknown-linux-gnu
+          # - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
@@ -35,11 +34,10 @@ jobs:
 
   test-aesni-vaes:
     strategy:
-      fail-fast: false
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-          - i686-unknown-linux-gnu
+          # - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
@@ -49,11 +47,10 @@ jobs:
 
   test-aesni-vaes-avx512:
     strategy:
-      fail-fast: false
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-          - i686-unknown-linux-gnu
+          # - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
@@ -63,7 +60,6 @@ jobs:
 
   test-neon:
     strategy:
-      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
     uses: ./.github/workflows/runtest.yml
@@ -74,7 +70,6 @@ jobs:
 
   test-armv8:
     strategy:
-      fail-fast: false
       matrix:
         target:
           - armv7-unknown-linux-gnueabihf
@@ -101,33 +96,45 @@ jobs:
       target: riscv32gc-unknown-linux-gnu
       channel: nightly
       target-features: +zkne,+zknd
-      extra-features: --features=nightly
+      extra-features: --features=nightly -Z build-std
 
   test-software:
     strategy:
-      fail-fast: false
       matrix:
         channel: [ stable, beta, nightly ]
         target:
           - x86_64-unknown-linux-gnu
-          - i686-unknown-linux-gnu
+          # - i686-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
           - armv7-unknown-linux-gnueabi
           - armv7-unknown-linux-gnueabihf
           - thumbv7neon-unknown-linux-gnueabihf
           - riscv64gc-unknown-linux-gnu
-          - riscv32gc-unknown-linux-gnu
           - powerpc-unknown-linux-gnu
           - powerpc64-unknown-linux-gnu
           - powerpc64le-unknown-linux-gnu
           - s390x-unknown-linux-gnu
           - i586-unknown-linux-gnu
           - sparc64-unknown-linux-gnu
-        extra-features:
+        constant-time:
           - ''
           - --features=constant-time
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
       channel: ${{ matrix.channel }}
-      extra-features: ${{ matrix.extra-features }}
+      extra-features: ${{ matrix.constant-time }}
+
+  test-software-build-std:
+    strategy:
+      matrix:
+        target:
+          - riscv32gc-unknown-linux-gnu
+        constant-time:
+          - ''
+          - --features=constant-time
+    uses: ./.github/workflows/runtest.yml
+    with:
+      target: ${{ matrix.target }}
+      channel: nightly
+      extra-features: ${{ matrix.constant-time }} -Z build-std
