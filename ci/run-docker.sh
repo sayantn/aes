@@ -24,4 +24,4 @@ docker run \
   --workdir /checkout \
   --privileged \
   aes \
-  sh -c "HOME=/tmp PATH=\$PATH:/rust/bin exec cargo test --target ${1} $(shift 1; echo "$*") \$EXTRA_ARGS -- --nocapture"
+  sh -c "HOME=/tmp PATH=\$PATH:/rust/bin exec cargo test --target ${1} $(shift 1; echo "$*") -- --nocapture"
