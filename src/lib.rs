@@ -14,7 +14,6 @@
         target_arch = "arm",
         target_feature = "v8",
         target_feature = "aes",
-        target_endian = "little" // https://github.com/rust-lang/stdarch/issues/1484
     ),
     feature(stdarch_arm_neon_intrinsics)
 )]
@@ -54,7 +53,6 @@ cfg_if! {
             all(feature = "nightly", target_arch = "arm", target_feature = "v8")
         ),
         target_feature = "aes",
-        target_endian = "little" // https://github.com/rust-lang/stdarch/issues/1484
     ))] {
         #[path = "aes_arm.rs"]
         mod aes;
