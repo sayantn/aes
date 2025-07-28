@@ -24,10 +24,9 @@
         target_feature = "zkne",
         target_feature = "zknd"
     ),
-    feature(link_llvm_intrinsics, abi_unadjusted)
+    feature(riscv_ext_intrinsics)
 )]
 #![allow(
-    internal_features,
     clippy::identity_op,
     clippy::inline_always,
     clippy::similar_names,
