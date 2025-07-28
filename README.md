@@ -13,7 +13,7 @@ implementations, among which it automatically decides the best (most performant)
 - AES-NI (with Vector AES for 2-blocks) => requires a Nightly Compiler, the `nightly` feature to be enabled, and
   compiling for x86(64) with the `vaes` target_feature flag set.
 - AES-NI => requires compiling for x86(64) with the `sse4.1` and `aes` target_feature flags set.
-- AES-Neon => requires compiling for little-endian AArch64 or ARM64EC or ARM-v8 with the `aes` target_feature flag set (
+- AES-Neon => requires compiling for AArch64 or ARM64EC or ARM-v8 with the `aes` target_feature flag set (
   ARM-v8 requires a Nightly compiler and the `nightly` feature to be enabled).
 - AES-RV => Requires a Nightly compiler, the `nightly` feature to be enabled and compiling for RISC-V RV64 or RV32 with
   the `zkne` and `zknd` target-features enabled (performance considerably improves with the `unaligned-scalar-mem`
