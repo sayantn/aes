@@ -25,7 +25,7 @@ jobs:
         channel: [ stable, beta, nightly ]
         target:
           - x86_64-unknown-linux-gnu
-          # - i686-unknown-linux-gnu
+          - i686-unknown-linux-gnu
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
@@ -37,66 +37,66 @@ jobs:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-          # - i686-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+        target-features:
+          - +vaes
+          - +vaes,+avx512f
+        exclude:
+          # FIXME: Add emulation for i686
+          - target: i686-unknown-linux-gnu
+            target-features: +vaes,+avx512f
     uses: ./.github/workflows/runtest.yml
     with:
       target: ${{ matrix.target }}
       channel: nightly
-      target-features: +vaes
-      extra-features: --features=nightly
-
-  test-aesni-vaes-avx512:
-    strategy:
-      matrix:
-        target:
-          - x86_64-unknown-linux-gnu
-          # - i686-unknown-linux-gnu
-    uses: ./.github/workflows/runtest.yml
-    with:
-      target: ${{ matrix.target }}
-      channel: nightly
-      target-features: +vaes,+avx512f
+      target-features: ${{ matrix.target-features }}
       extra-features: --features=nightly
 
   test-neon:
     strategy:
       matrix:
         channel: [ stable, beta, nightly ]
+        target:
+          - aarch64-unknown-linux-gnu
+        include:
+          - target: aarch64_be-unknown-linux-gnu
+            channel: nightly
+            build-std: true
     uses: ./.github/workflows/runtest.yml
     with:
-      target: aarch64-unknown-linux-gnu
+      target: ${{ matrix.target }}
       channel: ${{ matrix.channel }}
       target-features: +aes
+      extra-features: ${{ matrix.build-std && '-Z build-std' || '' }}
 
   test-armv8:
     strategy:
       matrix:
         target:
           - armv7-unknown-linux-gnueabihf
-          - armv7-unknown-linux-gnueabi
           - thumbv7neon-unknown-linux-gnueabihf
     uses: ./.github/workflows/runtest.yml
     with:
-      target: armv7-unknown-linux-gnueabihf
+      target: ${{ matrix.target }}
       channel: nightly
       target-features: +v8,+aes
       extra-features: --features=nightly
 
-  test-riscv64:
+  test-riscv:
+    strategy:
+      matrix:
+        target:
+          - riscv64gc-unknown-linux-gnu
+          - riscv32gc-unknown-linux-gnu
+        include:
+          - target: riscv32gc-unknown-linux-gnu
+            build-std: true
     uses: ./.github/workflows/runtest.yml
     with:
-      target: riscv64gc-unknown-linux-gnu
+      target: ${{ matrix.target }}
       channel: nightly
       target-features: +zkne,+zknd
-      extra-features: --features=nightly
-
-  test-riscv32:
-    uses: ./.github/workflows/runtest.yml
-    with:
-      target: riscv32gc-unknown-linux-gnu
-      channel: nightly
-      target-features: +zkne,+zknd
-      extra-features: --features=nightly -Z build-std
+      extra-features: --features=nightly ${{ matrix.build-std && '-Z build-std' || '' }}
 
   test-software:
     strategy:
@@ -104,7 +104,7 @@ jobs:
         channel: [ stable, beta, nightly ]
         target:
           - x86_64-unknown-linux-gnu
-          # - i686-unknown-linux-gnu
+          - i686-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
           - armv7-unknown-linux-gnueabi
           - armv7-unknown-linux-gnueabihf
@@ -130,6 +130,7 @@ jobs:
       matrix:
         target:
           - riscv32gc-unknown-linux-gnu
+          - aarch64_be-unknown-linux-gnu
         constant-time:
           - ''
           - --features=constant-time
