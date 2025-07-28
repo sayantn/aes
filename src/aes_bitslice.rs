@@ -205,7 +205,7 @@ const fn ror8_32(x: u128) -> u128 {
     }
 }
 
-const fn mixcolumns(state: u128) -> u128 {
+fn mixcolumns(state: u128) -> u128 {
     let s = state ^ swap16(state);
     let s = s ^ swap8(s) ^ state;
     let t = xtime(state);
@@ -213,7 +213,7 @@ const fn mixcolumns(state: u128) -> u128 {
     s ^ t ^ ror8_32(t)
 }
 
-const fn invmixcolumns(state: u128) -> u128 {
+fn invmixcolumns(state: u128) -> u128 {
     let s = state ^ swap16(state);
     let s = s ^ swap8(s) ^ state;
 
@@ -335,7 +335,30 @@ impl AesBlock {
     }
 }
 
-const RCON: [u32; 10] = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+const RCON: [u32; 10] = if cfg!(target_endian = "big") {
+    [
+        0x0100_0000,
+        0x0200_0000,
+        0x0400_0000,
+        0x0800_0000,
+        0x1000_0000,
+        0x2000_0000,
+        0x4000_0000,
+        0x8000_0000,
+        0x1b00_0000,
+        0x3600_0000,
+    ]
+} else {
+    [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36]
+};
+
+const fn ror8(a: u32) -> u32 {
+    if cfg!(target_endian = "big") {
+        a.rotate_left(8)
+    } else {
+        a.rotate_right(8)
+    }
+}
 
 pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
     let mut expanded_keys: [AesBlock; 11] = unsafe { mem::zeroed() };
@@ -346,7 +369,7 @@ pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
     }
 
     for i in (0..40).step_by(4) {
-        columns[i + 4] = columns[i + 0] ^ sub_word(columns[i + 3]).rotate_right(8) ^ RCON[i / 4];
+        columns[i + 4] = columns[i + 0] ^ ror8(sub_word(columns[i + 3])) ^ RCON[i / 4];
         columns[i + 5] = columns[i + 1] ^ columns[i + 4];
         columns[i + 6] = columns[i + 2] ^ columns[i + 5];
         columns[i + 7] = columns[i + 3] ^ columns[i + 6];
@@ -364,7 +387,7 @@ pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
     }
 
     for i in (0..42).step_by(6) {
-        columns[i + 6] = columns[i + 0] ^ sub_word(columns[i + 5]).rotate_right(8) ^ RCON[i / 6];
+        columns[i + 6] = columns[i + 0] ^ ror8(sub_word(columns[i + 5])) ^ RCON[i / 6];
         columns[i + 7] = columns[i + 1] ^ columns[i + 6];
         columns[i + 8] = columns[i + 2] ^ columns[i + 7];
         columns[i + 9] = columns[i + 3] ^ columns[i + 8];
@@ -372,7 +395,7 @@ pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
         columns[i + 11] = columns[i + 5] ^ columns[i + 10];
     }
 
-    columns[48] = columns[42] ^ sub_word(columns[47]).rotate_right(8) ^ RCON[7];
+    columns[48] = columns[42] ^ ror8(sub_word(columns[47])) ^ RCON[7];
     columns[49] = columns[43] ^ columns[48];
     columns[50] = columns[44] ^ columns[49];
     columns[51] = columns[45] ^ columns[50];
@@ -389,7 +412,7 @@ pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
     }
 
     for i in (0..48).step_by(8) {
-        columns[i + 8] = columns[i + 0] ^ sub_word(columns[i + 7]).rotate_right(8) ^ RCON[i / 8];
+        columns[i + 8] = columns[i + 0] ^ ror8(sub_word(columns[i + 7])) ^ RCON[i / 8];
         columns[i + 9] = columns[i + 1] ^ columns[i + 8];
         columns[i + 10] = columns[i + 2] ^ columns[i + 9];
         columns[i + 11] = columns[i + 3] ^ columns[i + 10];
@@ -399,7 +422,7 @@ pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
         columns[i + 15] = columns[i + 7] ^ columns[i + 14];
     }
 
-    columns[56] = columns[48] ^ sub_word(columns[55]).rotate_right(8) ^ RCON[6];
+    columns[56] = columns[48] ^ ror8(sub_word(columns[55])) ^ RCON[6];
     columns[57] = columns[49] ^ columns[56];
     columns[58] = columns[50] ^ columns[57];
     columns[59] = columns[51] ^ columns[58];
