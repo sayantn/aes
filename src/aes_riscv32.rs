@@ -1,3 +1,4 @@
+use core::arch::riscv32::*;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 use core::{mem, slice};
 
@@ -5,17 +6,6 @@ use core::{mem, slice};
 #[repr(C, align(16))]
 #[must_use]
 pub struct AesBlock(u32, u32, u32, u32);
-
-extern "unadjusted" {
-    #[link_name = "llvm.riscv.aes32esmi"]
-    fn aes32esmi(rs1: u32, rs2: u32, bs: u32) -> u32;
-    #[link_name = "llvm.riscv.aes32esi"]
-    fn aes32esi(rs1: u32, rs2: u32, bs: u32) -> u32;
-    #[link_name = "llvm.riscv.aes32dsmi"]
-    fn aes32dsmi(rs1: u32, rs2: u32, bs: u32) -> u32;
-    #[link_name = "llvm.riscv.aes32dsi"]
-    fn aes32dsi(rs1: u32, rs2: u32, bs: u32) -> u32;
-}
 
 macro_rules! outer {
     (fn $inner:ident <- $name:ident) => {

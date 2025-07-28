@@ -1,22 +1,6 @@
+use core::arch::riscv64::*;
 use core::mem;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
-
-extern "unadjusted" {
-    #[link_name = "llvm.riscv.aes64esm"]
-    fn aes64esm(rs1: u64, rs2: u64) -> u64;
-    #[link_name = "llvm.riscv.aes64es"]
-    fn aes64es(rs1: u64, rs2: u64) -> u64;
-    #[link_name = "llvm.riscv.aes64dsm"]
-    fn aes64dsm(rs1: u64, rs2: u64) -> u64;
-    #[link_name = "llvm.riscv.aes64ds"]
-    fn aes64ds(rs1: u64, rs2: u64) -> u64;
-    #[link_name = "llvm.riscv.aes64im"]
-    fn aes64im(rs1: u64) -> u64;
-    #[link_name = "llvm.riscv.aes64ks1i"]
-    fn aes64ks1i(rs1: u64, rnum: u32) -> u64;
-    #[link_name = "llvm.riscv.aes64ks2"]
-    fn aes64ks2(rs1: u64, rs2: u64) -> u64;
-}
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 #[repr(C, align(16))]
@@ -152,13 +136,13 @@ impl AesBlock {
 }
 
 #[inline(always)]
-unsafe fn keyexp_128<const RNUM: u32>(prev: AesBlock) -> AesBlock {
+unsafe fn keyexp_128<const RNUM: u8>(prev: AesBlock) -> AesBlock {
     let tmp = aes64ks2(aes64ks1i(prev.1, RNUM), prev.0);
     AesBlock(tmp, aes64ks2(tmp, prev.1))
 }
 
 #[inline(always)]
-unsafe fn keyexp_192<const RNUM: u32>(mut state: (u64, u64, u64)) -> (u64, u64, u64) {
+unsafe fn keyexp_192<const RNUM: u8>(mut state: (u64, u64, u64)) -> (u64, u64, u64) {
     state.0 = aes64ks2(aes64ks1i(state.2, RNUM), state.0);
     state.1 = aes64ks2(state.0, state.1);
     state.2 = aes64ks2(state.1, state.2);
@@ -166,7 +150,7 @@ unsafe fn keyexp_192<const RNUM: u32>(mut state: (u64, u64, u64)) -> (u64, u64, 
 }
 
 #[inline(always)]
-unsafe fn keyexp_256_1<const RNUM: u32>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
+unsafe fn keyexp_256_1<const RNUM: u8>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
     let tmp = aes64ks2(aes64ks1i(prev1.1, RNUM), prev0.0);
     AesBlock(tmp, aes64ks2(tmp, prev0.1))
 }
