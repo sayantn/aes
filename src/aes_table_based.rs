@@ -1,7 +1,7 @@
 #![allow(clippy::unreadable_literal, clippy::cast_possible_truncation)]
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 #[repr(C, align(16))]
 #[must_use]
 pub struct AesBlock(u32, u32, u32, u32);

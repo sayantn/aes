@@ -2,7 +2,7 @@ use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::{common::array_from_slice, AesBlock, AesBlockX2};
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 #[repr(C, align(32))]
 #[must_use]
 pub struct AesBlockX4(AesBlockX2, AesBlockX2);

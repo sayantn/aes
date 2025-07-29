@@ -11,15 +11,6 @@ use crate::aes::AesBlock;
 #[must_use]
 pub struct AesBlockX2(pub(super) __m256i);
 
-impl PartialEq for AesBlockX2 {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        (*self ^ *other).is_zero()
-    }
-}
-
-impl Eq for AesBlockX2 {}
-
 impl From<[u8; 32]> for AesBlockX2 {
     #[inline]
     fn from(value: [u8; 32]) -> Self {

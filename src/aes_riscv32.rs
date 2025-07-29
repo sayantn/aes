@@ -2,7 +2,7 @@ use core::arch::riscv32::*;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 use core::{mem, slice};
 
-#[derive(Eq, PartialEq, Copy, Clone)]
+#[derive(Copy, Clone)]
 #[repr(C, align(16))]
 #[must_use]
 pub struct AesBlock(u32, u32, u32, u32);
