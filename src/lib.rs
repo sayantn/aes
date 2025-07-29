@@ -26,7 +26,22 @@
     ),
     feature(riscv_ext_intrinsics)
 )]
+#![cfg_attr(
+    all(
+        feature = "nightly",
+        any(target_arch = "powerpc", target_arch = "powerpc64"),
+        target_feature = "power8-crypto"
+    ),
+    feature(
+        stdarch_powerpc,
+        link_llvm_intrinsics,
+        abi_unadjusted,
+        simd_ffi,
+        core_intrinsics
+    )
+)]
 #![allow(
+    internal_features,
     clippy::identity_op,
     clippy::inline_always,
     clippy::similar_names,
@@ -70,6 +85,13 @@ cfg_if! {
         target_feature = "zknd"
     ))] {
         #[path = "aes_riscv32.rs"]
+        mod aes;
+    } else if #[cfg(all(
+        feature = "nightly",
+        any(target_arch = "powerpc", target_arch = "powerpc64"),
+        target_feature = "power8-crypto"
+    ))] {
+        #[path = "aes_ppc.rs"]
         mod aes;
     } else if #[cfg(feature = "constant-time")] {
         #[path = "aes_bitslice.rs"]
