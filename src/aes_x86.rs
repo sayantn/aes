@@ -9,13 +9,6 @@ use core::ops::{BitAnd, BitOr, BitXor, Not};
 #[must_use]
 pub struct AesBlock(pub(super) __m128i);
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self(unsafe { _mm_loadu_si128(value.as_ptr().cast()) })
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

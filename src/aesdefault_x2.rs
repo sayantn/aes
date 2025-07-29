@@ -7,13 +7,6 @@ use crate::{common::array_from_slice, AesBlock};
 #[must_use]
 pub struct AesBlockX2(AesBlock, AesBlock);
 
-impl From<[u8; 32]> for AesBlockX2 {
-    #[inline]
-    fn from(value: [u8; 32]) -> Self {
-        Self::new(value)
-    }
-}
-
 impl From<(AesBlock, AesBlock)> for AesBlockX2 {
     #[inline]
     fn from((hi, lo): (AesBlock, AesBlock)) -> Self {

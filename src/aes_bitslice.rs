@@ -232,13 +232,6 @@ fn invmixcolumns(state: u128) -> u128 {
 #[must_use]
 pub struct AesBlock(u128);
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self::new(value)
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

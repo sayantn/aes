@@ -49,7 +49,7 @@ the `RUSTFLAGS` environment variable, and use the `nightly` feature **only** if 
 
 # Minimum Supported Rust version
 
-I typically don't maintain a strict MSRV. Normally, it would be the *latest stable* if the `nightly` crate feature is not enabled, otherwise it would be the *latest nightly* (by latest, I mean latest at the time of the release).
+I typically don't maintain a strict MSRV. Normally, it would be the *latest stable* at the time of release if the `nightly` crate feature is not enabled, otherwise it would be the *latest nightly* at the time of release.
 
 # Warning
 

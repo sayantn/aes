@@ -11,13 +11,6 @@ use crate::{AesBlock, AesBlockX2};
 #[must_use]
 pub struct AesBlockX4(__m512i);
 
-impl From<[u8; 64]> for AesBlockX4 {
-    #[inline]
-    fn from(value: [u8; 64]) -> Self {
-        Self(unsafe { _mm512_loadu_si512(value.as_ptr().cast()) })
-    }
-}
-
 impl From<(AesBlock, AesBlock, AesBlock, AesBlock)> for AesBlockX4 {
     #[inline]
     #[allow(clippy::many_single_char_names)]

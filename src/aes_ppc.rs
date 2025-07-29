@@ -29,13 +29,6 @@ extern "unadjusted" {
 #[must_use]
 pub struct AesBlock(vector_unsigned_long);
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self::new(value)
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

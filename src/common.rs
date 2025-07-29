@@ -3,15 +3,6 @@ use core::fmt;
 use core::fmt::{Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 use core::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 
-#[inline(always)]
-fn try_from_slice<const N: usize, T: From<[u8; N]>>(value: &[u8]) -> Result<T, usize> {
-    if value.len() >= N {
-        Ok(array_from_slice(value, 0).into())
-    } else {
-        Err(value.len())
-    }
-}
-
 #[allow(unused)]
 #[inline(always)]
 pub(crate) const fn array_from_slice<const N: usize>(value: &[u8], offset: usize) -> [u8; N] {
@@ -59,6 +50,13 @@ impl From<AesBlock> for u128 {
 
 macro_rules! impl_common_ops {
     ($($name:ty, $key_len:literal),*) => {$(
+    impl From<[u8; $key_len]> for $name {
+        #[inline]
+        fn from(value: [u8; $key_len]) -> Self {
+            Self::new(value)
+        }
+    }
+
     impl Default for $name {
         #[inline]
         fn default() -> Self {
@@ -78,7 +76,11 @@ macro_rules! impl_common_ops {
 
         #[inline]
         fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-            try_from_slice(value)
+            if value.len() >= $key_len {
+                Ok(array_from_slice(value, 0).into())
+            } else {
+                Err(value.len())
+            }
         }
     }
 
