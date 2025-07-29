@@ -19,6 +19,30 @@ pub(crate) const fn array_from_slice<const N: usize>(value: &[u8], offset: usize
     unsafe { *value.as_ptr().add(offset).cast() }
 }
 
+impl PartialEq for AesBlock {
+    fn eq(&self, other: &Self) -> bool {
+        (*self ^ *other).is_zero()
+    }
+}
+
+impl Eq for AesBlock {}
+
+impl PartialEq for AesBlockX2 {
+    fn eq(&self, other: &Self) -> bool {
+        (*self ^ *other).is_zero()
+    }
+}
+
+impl Eq for AesBlockX2 {}
+
+impl PartialEq for AesBlockX4 {
+    fn eq(&self, other: &Self) -> bool {
+        (*self ^ *other).is_zero()
+    }
+}
+
+impl Eq for AesBlockX4 {}
+
 impl From<u128> for AesBlock {
     #[inline]
     fn from(value: u128) -> Self {

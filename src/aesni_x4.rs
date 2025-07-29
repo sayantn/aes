@@ -11,15 +11,6 @@ use crate::{AesBlock, AesBlockX2};
 #[must_use]
 pub struct AesBlockX4(__m512i);
 
-impl PartialEq for AesBlockX4 {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        unsafe { _mm512_cmpeq_epi64_mask(self.0, other.0) == 0b1111_1111 }
-    }
-}
-
-impl Eq for AesBlockX4 {}
-
 impl From<[u8; 64]> for AesBlockX4 {
     #[inline]
     fn from(value: [u8; 64]) -> Self {

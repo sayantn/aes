@@ -227,7 +227,7 @@ fn invmixcolumns(state: u128) -> u128 {
     s ^ t ^ swap8(t)
 }
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone)]
 #[repr(transparent)]
 #[must_use]
 pub struct AesBlock(u128);

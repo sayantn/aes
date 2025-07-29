@@ -10,15 +10,6 @@ use core::{mem, slice};
 #[must_use]
 pub struct AesBlock(uint8x16_t);
 
-impl PartialEq for AesBlock {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        (*self ^ *other).is_zero()
-    }
-}
-
-impl Eq for AesBlock {}
-
 impl From<[u8; 16]> for AesBlock {
     #[inline]
     fn from(value: [u8; 16]) -> Self {
