@@ -3,7 +3,7 @@
 This is a pure-Rust platform-agnostic [AES](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf) library, that
 is focused on reusability and optimal performance.
 
-This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 7
+This library guarantees the best performance on the `target_cpu` (if correctly specified). This currently has 8
 implementations, among which it automatically decides the best (most performant) using Cargo's `target_feature` flags.
 
 # The implementations and their requirements are:
@@ -18,6 +18,8 @@ implementations, among which it automatically decides the best (most performant)
 - AES-RV => Requires a Nightly compiler, the `nightly` feature to be enabled and compiling for RISC-V RV64 or RV32 with
   the `zkne` and `zknd` target-features enabled (performance considerably improves with the `unaligned-scalar-mem`
   target-feature enabled)
+- AES-PPC => Requires a Nightly compiler, the `nightly` feature to be enabled and compiling for PowerPC (32 or 64-bit) with 
+  the `power8-crypto` target feature enabled
 - Software AES => fallback implementation based on Rijmen and Daemen's `optimized` implementation (available
   on [their website](https://web.archive.org/web/20050828204927/http://www.iaik.tu-graz.ac.at/research/krypto/AES/old/%7Erijmen/rijndael/)).
 - Constant-time Software AES => Much slower than Software AES, but is constant-time, which can be important in some
