@@ -97,6 +97,20 @@ jobs:
       channel: nightly
       target-features: +zkne,+zknd
       extra-features: --features=nightly ${{ matrix.build-std && '-Z build-std' || '' }}
+  
+  test-powerpc:
+    strategy:
+      matrix:
+        target:
+          # - powerpc-unknown-linux-gnu FIXME: `qemu-ppc` doesn't seem to have a CPU that supports AES
+          - powerpc64-unknown-linux-gnu
+          - powerpc64le-unknown-linux-gnu
+    uses: ./.github/workflows/runtest.yml
+    with:
+      target: ${{ matrix.target }}
+      channel: nightly
+      target-features: +power8-crypto
+      extra-features: --features=nightly
 
   test-software:
     strategy:
