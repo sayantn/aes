@@ -64,7 +64,6 @@ cfg_if! {
                 all(feature = "nightly", target_arch = "arm", target_feature = "v8")
             ),
             target_feature = "aes",
-            target_endian = "little"
         ))] {
         macro_rules! impl_pre_encdec {
             ($($name:ident),*) => {$(
