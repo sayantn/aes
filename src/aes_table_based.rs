@@ -22,13 +22,6 @@ fn store_u32_be(slice: &mut [u8], num: u32) {
     slice[3] = num as u8;
 }
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self::new(value)
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

@@ -41,13 +41,6 @@ macro_rules! outer {
     }};
 }
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self::new(value)
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

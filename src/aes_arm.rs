@@ -10,13 +10,6 @@ use core::{mem, slice};
 #[must_use]
 pub struct AesBlock(uint8x16_t);
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self(unsafe { vld1q_u8(value.as_ptr()) })
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

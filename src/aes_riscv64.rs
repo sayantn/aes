@@ -7,13 +7,6 @@ use core::ops::{BitAnd, BitOr, BitXor, Not};
 #[must_use]
 pub struct AesBlock(u64, u64);
 
-impl From<[u8; 16]> for AesBlock {
-    #[inline]
-    fn from(value: [u8; 16]) -> Self {
-        Self::new(value)
-    }
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 

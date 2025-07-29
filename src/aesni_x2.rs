@@ -11,13 +11,6 @@ use crate::aes::AesBlock;
 #[must_use]
 pub struct AesBlockX2(pub(super) __m256i);
 
-impl From<[u8; 32]> for AesBlockX2 {
-    #[inline]
-    fn from(value: [u8; 32]) -> Self {
-        Self(unsafe { _mm256_loadu_si256(value.as_ptr().cast()) })
-    }
-}
-
 impl From<(AesBlock, AesBlock)> for AesBlockX2 {
     #[inline]
     fn from(value: (AesBlock, AesBlock)) -> Self {
