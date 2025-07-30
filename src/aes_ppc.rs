@@ -105,7 +105,7 @@ impl AesBlock {
     /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
-        Self(unsafe { vncipher(self.0, Self::zero().0) }) ^ round_key
+        self.dec2(Self::zero()) ^ round_key
     }
 
     /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
@@ -114,7 +114,7 @@ impl AesBlock {
         Self(unsafe { vcipherlast(self.0, round_key.0) })
     }
 
-    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
+    /// Performs one round of AES decryption function without `InvMixColumns` (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(unsafe { vncipherlast(self.0, round_key.0) })
@@ -126,7 +126,7 @@ impl AesBlock {
         self.dec_last(Self::zero()).enc(Self::zero())
     }
 
-    /// Performs the `InvMixColumn`s operation
+    /// Performs the `InvMixColumns` operation
     #[inline]
     pub fn imc(self) -> Self {
         self.enc_last(Self::zero()).dec(Self::zero())

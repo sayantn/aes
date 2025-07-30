@@ -79,7 +79,7 @@ impl AesBlock {
         }
     }
 
-    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         unsafe {
@@ -101,7 +101,7 @@ impl AesBlock {
         }
     }
 
-    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
+    /// Performs one round of AES decryption function without `InvMixColumns` (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         unsafe {
@@ -121,7 +121,7 @@ impl AesBlock {
         }
     }
 
-    /// Performs the `InvMixColumn`s operation
+    /// Performs the `InvMixColumns` operation
     #[inline]
     pub fn imc(self) -> Self {
         unsafe { Self(aes64im(self.0), aes64im(self.1)) }

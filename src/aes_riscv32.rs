@@ -129,13 +129,13 @@ impl AesBlock {
         outer!(enc: aes32esi, self, round_key)
     }
 
-    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         outer!(dec: aes32dsmi, self, round_key)
     }
 
-    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
+    /// Performs one round of AES decryption function without `InvMixColumns` (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         outer!(dec: aes32dsi, self, round_key)
@@ -147,7 +147,7 @@ impl AesBlock {
         self.dec_last(Self::zero()).enc(Self::zero())
     }
 
-    /// Performs the `InvMixColumn`s operation
+    /// Performs the `InvMixColumns` operation
     #[inline]
     pub fn imc(self) -> Self {
         self.enc_last(Self::zero()).dec(Self::zero())

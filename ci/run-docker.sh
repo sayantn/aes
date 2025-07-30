@@ -16,6 +16,7 @@ docker run \
   --env CARGO_HOME=/cargo \
   --env CARGO_TARGET_DIR=/checkout/target \
   --env RUSTFLAGS \
+  --env RUST_BACKTRACE \
   --volume "${HOME}/.cargo":/cargo \
   --volume "$(rustc --print sysroot)":/rust:ro \
   --volume "$(pwd)":/checkout:ro \
