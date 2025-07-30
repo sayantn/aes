@@ -96,6 +96,12 @@ impl AesBlock {
         Self(unsafe { vcipher(self.0, round_key.0) })
     }
 
+    /// `InvShiftRows`->`InvSubBytes`->`AddRoundKey`->`InvMixColumns`
+    #[inline]
+    pub(crate) fn dec2(self, round_key: Self) -> Self {
+        Self(unsafe { vncipher(self.0, round_key.0) })
+    }
+
     /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
@@ -126,6 +132,8 @@ impl AesBlock {
         self.enc_last(Self::zero()).dec(Self::zero())
     }
 }
+
+// TODO: Tidy up and optimize the keygen code
 
 #[inline(always)]
 fn sub_word(input: u32) -> u32 {

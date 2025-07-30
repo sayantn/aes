@@ -34,26 +34,44 @@ pub trait AesDecrypt<const KEY_LEN: usize>:
     fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4;
 }
 
-#[inline(always)]
-fn dec_round_keys<const N: usize>(enc_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
-    let mut drk = [AesBlock::zero(); N];
-    drk[0] = enc_round_keys[N - 1];
-    for i in 1..(N - 1) {
-        drk[i] = enc_round_keys[N - 1 - i].imc();
-    }
-    drk[N - 1] = enc_round_keys[0];
-    drk
-}
+cfg_if! {
+    if #[cfg(all(
+        feature = "nightly",
+        any(target_arch = "powerpc", target_arch = "powerpc64"),
+        target_feature = "power8-crypto"
+    ))] {
+        #[inline(always)]
+        fn dec_round_keys<const N: usize>(enc_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
+            *enc_round_keys
+        }
 
-#[inline(always)]
-fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
-    let mut rk = [AesBlock::zero(); N];
-    rk[0] = dec_round_keys[N - 1];
-    for i in 1..(N - 1) {
-        rk[i] = dec_round_keys[N - 1 - i].mc();
+        #[inline(always)]
+        fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
+            *dec_round_keys
+        }
+    } else {
+        #[inline(always)]
+        fn dec_round_keys<const N: usize>(enc_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
+            let mut drk = [AesBlock::zero(); N];
+            drk[0] = enc_round_keys[N - 1];
+            for i in 1..(N - 1) {
+                drk[i] = enc_round_keys[N - 1 - i].imc();
+            }
+            drk[N - 1] = enc_round_keys[0];
+            drk
+        }
+
+        #[inline(always)]
+        fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
+            let mut rk = [AesBlock::zero(); N];
+            rk[0] = dec_round_keys[N - 1];
+            for i in 1..(N - 1) {
+                rk[i] = dec_round_keys[N - 1 - i].mc();
+            }
+            rk[N - 1] = dec_round_keys[0];
+            rk
+        }
     }
-    rk[N - 1] = dec_round_keys[0];
-    rk
 }
 
 cfg_if! {
@@ -214,24 +232,50 @@ macro_rules! implement_aes {
                 }
             }
 
-            fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                ciphertext
-                    .chain_dec(&self.round_keys[..$nr])
-                    .dec_last(self.round_keys[$nr])
-            }
+            cfg_if! {
+                if #[cfg(all(
+                    feature = "nightly",
+                    any(target_arch = "powerpc", target_arch = "powerpc64"),
+                    target_feature = "power8-crypto"
+                ))] {
+                    fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
+                        let mut acc = ciphertext ^ self.round_keys[$nr];
+                        for &rk in self.round_keys[1..$nr].iter().rev() {
+                            acc = acc.dec2(rk);
+                        }
+                        acc.dec_last(self.round_keys[0])
+                    }
 
-            fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
-                let round_keys = self.round_keys.map(Into::into);
-                ciphertext
-                    .chain_dec(&round_keys[..$nr])
-                    .dec_last(round_keys[$nr])
-            }
+                    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
+                        let (a, b) = ciphertext.into();
+                        (self.decrypt_block(a), self.decrypt_block(b)).into()
+                    }
 
-            fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
-                let round_keys = self.round_keys.map(Into::into);
-                ciphertext
-                    .chain_dec(&round_keys[..$nr])
-                    .dec_last(round_keys[$nr])
+                    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
+                        let (a, b) = ciphertext.into();
+                        (self.decrypt_2_blocks(a), self.decrypt_2_blocks(b)).into()
+                    }
+                } else {
+                    fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
+                        ciphertext
+                            .chain_dec(&self.round_keys[..$nr])
+                            .dec_last(self.round_keys[$nr])
+                    }
+
+                    fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
+                        let round_keys = self.round_keys.map(Into::into);
+                        ciphertext
+                            .chain_dec(&round_keys[..$nr])
+                            .dec_last(round_keys[$nr])
+                    }
+
+                    fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
+                        let round_keys = self.round_keys.map(Into::into);
+                        ciphertext
+                            .chain_dec(&round_keys[..$nr])
+                            .dec_last(round_keys[$nr])
+                    }
+                }
             }
         }
     };
