@@ -120,7 +120,7 @@ impl AesBlockX4 {
         Self(self.0.enc(round_key.0), self.1.enc(round_key.1))
     }
 
-    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumn`s->`AddRoundKey`)
+    /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
         Self(self.0.dec(round_key.0), self.1.dec(round_key.1))
@@ -132,7 +132,7 @@ impl AesBlockX4 {
         Self(self.0.enc_last(round_key.0), self.1.enc_last(round_key.1))
     }
 
-    /// Performs one round of AES decryption function without `InvMixColumn`s (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
+    /// Performs one round of AES decryption function without `InvMixColumns` (`InvShiftRows`->`InvSubBytes`->`AddRoundKey`)
     #[inline]
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(self.0.dec_last(round_key.0), self.1.dec_last(round_key.1))
