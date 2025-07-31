@@ -12,6 +12,7 @@ pub(crate) const fn array_from_slice<const N: usize>(value: &[u8], offset: usize
 
 impl PartialEq for AesBlock {
     fn eq(&self, other: &Self) -> bool {
+        // This ensures constant-time equality
         (*self ^ *other).is_zero()
     }
 }
@@ -35,6 +36,7 @@ impl PartialEq for AesBlockX4 {
 impl Eq for AesBlockX4 {}
 
 impl From<u128> for AesBlock {
+    /// Returns an `AesBlock` corresponding to the big-endian byte-representation of `value`
     #[inline]
     fn from(value: u128) -> Self {
         value.to_be_bytes().into()
@@ -42,6 +44,7 @@ impl From<u128> for AesBlock {
 }
 
 impl From<AesBlock> for u128 {
+    /// Returns an `u128` whose big-endian byte-representation corresponds to the passed `AesBlock`
     #[inline]
     fn from(value: AesBlock) -> Self {
         u128::from_be_bytes(value.into())
@@ -51,6 +54,7 @@ impl From<AesBlock> for u128 {
 macro_rules! impl_common_ops {
     ($($name:ty, $key_len:literal),*) => {$(
     impl From<[u8; $key_len]> for $name {
+        /// The conversion of `u8` array to `AesBlock` is done using
         #[inline]
         fn from(value: [u8; $key_len]) -> Self {
             Self::new(value)

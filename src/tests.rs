@@ -1,3 +1,4 @@
+//! Tests the implementations with test vectors from NIST
 use hex::FromHex;
 use lazy_static::lazy_static;
 
