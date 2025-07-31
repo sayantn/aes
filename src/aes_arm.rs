@@ -85,38 +85,26 @@ impl AesBlock {
 
     /// `AddRoundKey`->`ShiftRows`->`SubBytes`
     #[inline(always)]
-    fn aese(self, round_key: Self) -> Self {
+    pub(crate) fn aese(self, round_key: Self) -> Self {
         Self(unsafe { vaeseq_u8(self.0, round_key.0) })
-    }
-
-    /// `AddRoundKey`->`ShiftRows`->`SubBytes`->`MixColumns`
-    #[inline(always)]
-    pub(crate) fn pre_enc(self, round_key: Self) -> Self {
-        self.aese(round_key).mc()
     }
 
     /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
     #[inline]
     pub fn enc(self, round_key: Self) -> Self {
-        self.pre_enc(Self::zero()) ^ round_key
+        self.aese(Self::zero()).mc() ^ round_key
     }
 
     /// `AddRoundKey`->`InvShiftRows`->`InvSubBytes`
     #[inline(always)]
-    fn aesd(self, round_key: Self) -> Self {
+    pub(crate) fn aesd(self, round_key: Self) -> Self {
         Self(unsafe { vaesdq_u8(self.0, round_key.0) })
-    }
-
-    /// `AddRoundKey`->`InvShiftRows`->`InvSubBytes`->`InvMixColumns`
-    #[inline(always)]
-    pub(crate) fn pre_dec(self, round_key: Self) -> Self {
-        self.aesd(round_key).imc()
     }
 
     /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
-        self.pre_dec(Self::zero()) ^ round_key
+        self.aesd(Self::zero()).imc() ^ round_key
     }
 
     /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)

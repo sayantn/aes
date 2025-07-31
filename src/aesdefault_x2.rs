@@ -114,4 +114,16 @@ impl AesBlockX2 {
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(self.0.dec_last(round_key.0), self.1.dec_last(round_key.1))
     }
+
+    /// Performs the `MixColumns` operation
+    #[inline]
+    pub fn mc(self) -> Self {
+        Self(self.0.mc(), self.1.mc())
+    }
+
+    /// Performs the `InvMixColumns` operation
+    #[inline]
+    pub fn imc(self) -> Self {
+        Self(self.0.imc(), self.1.imc())
+    }
 }

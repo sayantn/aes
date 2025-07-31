@@ -118,4 +118,17 @@ impl AesBlockX2 {
     pub fn dec_last(self, round_key: Self) -> Self {
         Self(unsafe { _mm256_aesdeclast_epi128(self.0, round_key.0) })
     }
+
+    /// Performs the `MixColumns` operation
+    #[inline]
+    pub fn mc(self) -> Self {
+        self.dec_last(Self::zero()).enc(Self::zero())
+    }
+
+    /// Performs the `InvMixColumns` operation
+    #[inline]
+    pub fn imc(self) -> Self {
+        let (a, b) = self.into();
+        (a.imc(), b.imc()).into()
+    }
 }
