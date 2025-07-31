@@ -83,49 +83,83 @@ cfg_if! {
             ),
             target_feature = "aes",
         ))] {
-        macro_rules! impl_pre_encdec {
+        macro_rules! impl_aese_aesd {
             ($($name:ident),*) => {$(
                 impl $name {
-                    fn pre_enc(self, round_key: Self) -> Self {
+                    fn aese(self, round_key: Self) -> Self {
                         let (a, b) = self.into();
                         let (rk_a, rk_b) = round_key.into();
-                        (a.pre_enc(rk_a), b.pre_enc(rk_b)).into()
+                        (a.aese(rk_a), b.aese(rk_b)).into()
                     }
 
-                    fn pre_dec(self, round_key: Self) -> Self {
+                    fn aesd(self, round_key: Self) -> Self {
                         let (a, b) = self.into();
                         let (rk_a, rk_b) = round_key.into();
-                        (a.pre_dec(rk_a), b.pre_dec(rk_b)).into()
+                        (a.aesd(rk_a), b.aesd(rk_b)).into()
                     }
                 }
             )*};
         }
 
-        impl_pre_encdec!(AesBlockX2, AesBlockX4);
+        impl_aese_aesd!(AesBlockX2, AesBlockX4);
 
         macro_rules! declare_chain {
             ($($name:ty),*) => {$(
                 impl $name {
-                    /// Computes `(self ^ keys[0]).enc(keys[1])...enc(keys[key.len() - 1])` in the most optimized way
+                    /// Computes `(self ^ keys[0]).enc(keys[1])...enc(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() == 0`
                     pub fn chain_enc(self, keys: &[$name]) -> $name {
                         assert_ne!(keys.len(), 0);
 
                         let mut acc = self;
                         for &key in &keys[..keys.len() - 1] {
-                            acc = acc.pre_enc(key);
+                            acc = acc.aese(key).mc();
                         }
                         acc ^ keys[keys.len() - 1]
                     }
 
-                    /// Computes `(self ^ keys[0]).dec(keys[1])...dec(keys[key.len() - 1])` in the most optimized way
+                    /// Computes `(self ^ keys[0]).dec(keys[1])...dec(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() == 0`
                     pub fn chain_dec(self, keys: &[$name]) -> $name {
                         assert_ne!(keys.len(), 0);
 
                         let mut acc = self;
                         for &key in &keys[..keys.len() - 1] {
-                            acc = acc.pre_dec(key);
+                            acc = acc.aesd(key).imc();
                         }
                         acc ^ keys[keys.len() - 1]
+                    }
+
+                    /// Computes `(self ^ keys[0]).enc(keys[1])...enc(keys[keys.len() - 2]).enc_last(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() < 2`
+                    pub fn chain_enc_with_last(self, keys: &[$name]) -> $name {
+                        assert!(keys.len() >= 2);
+
+                        let mut acc = self;
+                        for &key in &keys[..keys.len() - 2] {
+                            acc = acc.aese(key).mc();
+                        }
+                        acc.aese(keys[keys.len() - 2]) ^ keys[keys.len() - 1]
+                    }
+
+                    /// Computes `(self ^ keys[0]).dec(keys[1])...dec(keys[keys.len() - 2]).dec_last(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() < 2`
+                    pub fn chain_dec_with_last(self, keys: &[$name]) -> $name {
+                        assert!(keys.len() >= 2);
+
+                        let mut acc = self;
+                        for &key in &keys[..keys.len() - 2] {
+                            acc = acc.aesd(key).imc();
+                        }
+                        acc.aesd(keys[keys.len() - 2]) ^ keys[keys.len() - 1]
                     }
                 }
             )*};
@@ -134,7 +168,10 @@ cfg_if! {
         macro_rules! declare_chain {
             ($($name:ty),*) => {$(
                 impl $name {
-                    /// Computes `(self ^ keys[0]).enc(keys[1])...enc(keys[key.len() - 1])` in the most optimized way
+                    /// Computes `(self ^ keys[0]).enc(keys[1])...enc(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() == 0`
                     pub fn chain_enc(self, keys: &[$name]) -> $name {
                         assert_ne!(keys.len(), 0);
 
@@ -145,7 +182,10 @@ cfg_if! {
                         acc
                     }
 
-                    /// Computes `(self ^ keys[0]).dec(keys[1])...dec(keys[key.len() - 1])` in the most optimized way
+                    /// Computes `(self ^ keys[0]).dec(keys[1])...dec(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() == 0`
                     pub fn chain_dec(self, keys: &[$name]) -> $name {
                         assert_ne!(keys.len(), 0);
 
@@ -154,6 +194,34 @@ cfg_if! {
                             acc = acc.dec(key);
                         }
                         acc
+                    }
+
+                    /// Computes `(self ^ keys[0]).enc(keys[1])...enc(keys[keys.len() - 2]).enc_last(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() < 2`
+                    pub fn chain_enc_with_last(self, keys: &[$name]) -> $name {
+                        assert!(keys.len() >= 2);
+
+                        let mut acc = self ^ keys[0];
+                        for &key in &keys[1..keys.len() - 1] {
+                            acc = acc.enc(key);
+                        }
+                        acc.enc_last(keys[keys.len() - 1])
+                    }
+
+                    /// Computes `(self ^ keys[0]).dec(keys[1])...dec(keys[keys.len() - 2]).dec_last(keys[keys.len() - 1])` in the most optimized way
+                    ///
+                    /// # Panics
+                    /// If `keys.len() < 2`
+                    pub fn chain_dec_with_last(self, keys: &[$name]) -> $name {
+                        assert!(keys.len() >= 2);
+
+                        let mut acc = self ^ keys[0];
+                        for &key in &keys[1..keys.len() - 1] {
+                            acc = acc.dec(key);
+                        }
+                        acc.dec_last(keys[keys.len() - 1])
                     }
                 }
             )*};
@@ -173,6 +241,7 @@ macro_rules! implement_aes {
         impl private::Sealed for $enc_name {}
 
         impl From<[u8; $key_len]> for $enc_name {
+            /// Returns an encrypter with the provided key
             fn from(value: [u8; $key_len]) -> Self {
                 $enc_name {
                     round_keys: $keygen(value),
@@ -188,6 +257,7 @@ macro_rules! implement_aes {
         impl private::Sealed for $dec_name {}
 
         impl From<[u8; $key_len]> for $dec_name {
+            /// Returns an decrypter with the provided key
             fn from(value: [u8; $key_len]) -> Self {
                 $enc_name::from(value).decrypter()
             }
@@ -203,23 +273,17 @@ macro_rules! implement_aes {
             }
 
             fn encrypt_block(&self, plaintext: AesBlock) -> AesBlock {
-                plaintext
-                    .chain_enc(&self.round_keys[..$nr])
-                    .enc_last(self.round_keys[$nr])
+                plaintext.chain_enc_with_last(&self.round_keys)
             }
 
             fn encrypt_2_blocks(&self, plaintext: AesBlockX2) -> AesBlockX2 {
                 let round_keys = self.round_keys.map(Into::into);
-                plaintext
-                    .chain_enc(&round_keys[..$nr])
-                    .enc_last(round_keys[$nr])
+                plaintext.chain_enc_with_last(&round_keys)
             }
 
             fn encrypt_4_blocks(&self, plaintext: AesBlockX4) -> AesBlockX4 {
                 let round_keys = self.round_keys.map(Into::into);
-                plaintext
-                    .chain_enc(&round_keys[..$nr])
-                    .enc_last(round_keys[$nr])
+                plaintext.chain_enc_with_last(&round_keys)
             }
         }
 
@@ -240,8 +304,8 @@ macro_rules! implement_aes {
                 ))] {
                     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
                         let mut acc = ciphertext ^ self.round_keys[$nr];
-                        for &rk in self.round_keys[1..$nr].iter().rev() {
-                            acc = acc.dec2(rk);
+                        for &drk in self.round_keys[1..$nr].iter().rev() {
+                            acc = acc.dec2(drk);
                         }
                         acc.dec_last(self.round_keys[0])
                     }
@@ -257,23 +321,17 @@ macro_rules! implement_aes {
                     }
                 } else {
                     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
-                        ciphertext
-                            .chain_dec(&self.round_keys[..$nr])
-                            .dec_last(self.round_keys[$nr])
+                        ciphertext.chain_dec_with_last(&self.round_keys)
                     }
 
                     fn decrypt_2_blocks(&self, ciphertext: AesBlockX2) -> AesBlockX2 {
                         let round_keys = self.round_keys.map(Into::into);
-                        ciphertext
-                            .chain_dec(&round_keys[..$nr])
-                            .dec_last(round_keys[$nr])
+                        ciphertext.chain_dec_with_last(&round_keys)
                     }
 
                     fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4 {
                         let round_keys = self.round_keys.map(Into::into);
-                        ciphertext
-                            .chain_dec(&round_keys[..$nr])
-                            .dec_last(round_keys[$nr])
+                        ciphertext.chain_dec_with_last(&round_keys)
                     }
                 }
             }

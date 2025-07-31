@@ -96,12 +96,7 @@ impl AesBlock {
     /// Performs the `MixColumns` operation
     #[inline]
     pub fn mc(self) -> Self {
-        Self(unsafe {
-            _mm_aesenc_si128(
-                _mm_aesdeclast_si128(self.0, _mm_setzero_si128()),
-                _mm_setzero_si128(),
-            )
-        })
+        self.dec_last(Self::zero()).enc(Self::zero())
     }
 
     /// Performs the `InvMixColumns` operation
