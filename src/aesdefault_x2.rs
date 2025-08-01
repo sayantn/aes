@@ -1,3 +1,4 @@
+use core::mem;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::{common::array_from_slice, AesBlock};
@@ -75,7 +76,7 @@ impl AesBlockX2 {
 
     #[inline]
     pub const fn to_bytes(self) -> [u8; 32] {
-        unsafe { core::mem::transmute([self.0.to_bytes(), self.1.to_bytes()]) }
+        unsafe { mem::transmute([self.0.to_bytes(), self.1.to_bytes()]) }
     }
 
     #[inline]
