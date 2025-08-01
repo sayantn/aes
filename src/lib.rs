@@ -40,6 +40,7 @@
         core_intrinsics
     )
 )]
+#![deny(warnings)]
 #![allow(
     internal_features,
     clippy::identity_op,

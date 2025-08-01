@@ -133,13 +133,10 @@ impl AesBlock {
 }
 
 #[inline(always)]
-unsafe fn sub_word(input: u32) -> u32 {
-    let input = vreinterpretq_u8_u32(vdupq_n_u32(input));
-
-    // AES single round encryption (with a round key of all zeros)
-    let sub_input = vaeseq_u8(input, vdupq_n_u8(0));
-
-    vgetq_lane_u32::<0>(vreinterpretq_u32_u8(sub_input))
+fn sub_word(a: u32) -> u32 {
+    let a = AesBlock(unsafe { vreinterpretq_u8_u32(vdupq_n_u32(a)) });
+    let a = a.aese(AesBlock::zero());
+    unsafe { vgetq_lane_u32::<0>(vreinterpretq_u32_u8(a.0)) }
 }
 
 const RCON: [u32; 10] = if cfg!(target_endian = "big") {
@@ -168,83 +165,77 @@ const fn ror8(a: u32) -> u32 {
 }
 
 pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
-    unsafe {
-        let mut expanded_keys: [AesBlock; 11] = mem::zeroed();
+    let mut expanded_keys = [AesBlock::zero(); 11];
 
-        let keys_ptr: *mut u32 = expanded_keys.as_mut_ptr().cast();
-        let columns = slice::from_raw_parts_mut(keys_ptr, 44);
+    let columns: &mut [u32] =
+        unsafe { slice::from_raw_parts_mut(expanded_keys.as_mut_ptr().cast(), 44) };
 
-        for (i, chunk) in key.chunks_exact(4).enumerate() {
-            columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
-        }
-
-        for i in (0..40).step_by(4) {
-            columns[i + 4] = columns[i + 0] ^ ror8(sub_word(columns[i + 3])) ^ RCON[i / 4];
-            columns[i + 5] = columns[i + 1] ^ columns[i + 4];
-            columns[i + 6] = columns[i + 2] ^ columns[i + 5];
-            columns[i + 7] = columns[i + 3] ^ columns[i + 6];
-        }
-
-        expanded_keys
+    for (i, chunk) in key.chunks_exact(4).enumerate() {
+        columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
     }
+
+    for i in (0..40).step_by(4) {
+        columns[i + 4] = columns[i + 0] ^ ror8(sub_word(columns[i + 3])) ^ RCON[i / 4];
+        columns[i + 5] = columns[i + 1] ^ columns[i + 4];
+        columns[i + 6] = columns[i + 2] ^ columns[i + 5];
+        columns[i + 7] = columns[i + 3] ^ columns[i + 6];
+    }
+
+    expanded_keys
 }
 
 pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
-    unsafe {
-        let mut expanded_keys: [AesBlock; 13] = mem::zeroed();
+    let mut expanded_keys = [AesBlock::zero(); 13];
 
-        let keys_ptr: *mut u32 = expanded_keys.as_mut_ptr().cast();
-        let columns = slice::from_raw_parts_mut(keys_ptr, 52);
+    let columns: &mut [u32] =
+        unsafe { slice::from_raw_parts_mut(expanded_keys.as_mut_ptr().cast(), 52) };
 
-        for (i, chunk) in key.chunks_exact(4).enumerate() {
-            columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
-        }
-
-        for i in (0..42).step_by(6) {
-            columns[i + 6] = columns[i + 0] ^ ror8(sub_word(columns[i + 5])) ^ RCON[i / 6];
-            columns[i + 7] = columns[i + 1] ^ columns[i + 6];
-            columns[i + 8] = columns[i + 2] ^ columns[i + 7];
-            columns[i + 9] = columns[i + 3] ^ columns[i + 8];
-            columns[i + 10] = columns[i + 4] ^ columns[i + 9];
-            columns[i + 11] = columns[i + 5] ^ columns[i + 10];
-        }
-
-        columns[48] = columns[42] ^ ror8(sub_word(columns[47])) ^ RCON[7];
-        columns[49] = columns[43] ^ columns[48];
-        columns[50] = columns[44] ^ columns[49];
-        columns[51] = columns[45] ^ columns[50];
-
-        expanded_keys
+    for (i, chunk) in key.chunks_exact(4).enumerate() {
+        columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
     }
+
+    for i in (0..42).step_by(6) {
+        columns[i + 6] = columns[i + 0] ^ ror8(sub_word(columns[i + 5])) ^ RCON[i / 6];
+        columns[i + 7] = columns[i + 1] ^ columns[i + 6];
+        columns[i + 8] = columns[i + 2] ^ columns[i + 7];
+        columns[i + 9] = columns[i + 3] ^ columns[i + 8];
+        columns[i + 10] = columns[i + 4] ^ columns[i + 9];
+        columns[i + 11] = columns[i + 5] ^ columns[i + 10];
+    }
+
+    columns[48] = columns[42] ^ ror8(sub_word(columns[47])) ^ RCON[7];
+    columns[49] = columns[43] ^ columns[48];
+    columns[50] = columns[44] ^ columns[49];
+    columns[51] = columns[45] ^ columns[50];
+
+    expanded_keys
 }
 
 pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
-    unsafe {
-        let mut expanded_keys: [AesBlock; 15] = mem::zeroed();
+    let mut expanded_keys = [AesBlock::zero(); 15];
 
-        let keys_ptr: *mut u32 = expanded_keys.as_mut_ptr().cast();
-        let columns = slice::from_raw_parts_mut(keys_ptr, 60);
+    let columns: &mut [u32] =
+        unsafe { slice::from_raw_parts_mut(expanded_keys.as_mut_ptr().cast(), 60) };
 
-        for (i, chunk) in key.chunks_exact(4).enumerate() {
-            columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
-        }
-
-        for i in (0..48).step_by(8) {
-            columns[i + 8] = columns[i + 0] ^ ror8(sub_word(columns[i + 7])) ^ RCON[i / 8];
-            columns[i + 9] = columns[i + 1] ^ columns[i + 8];
-            columns[i + 10] = columns[i + 2] ^ columns[i + 9];
-            columns[i + 11] = columns[i + 3] ^ columns[i + 10];
-            columns[i + 12] = columns[i + 4] ^ sub_word(columns[i + 11]);
-            columns[i + 13] = columns[i + 5] ^ columns[i + 12];
-            columns[i + 14] = columns[i + 6] ^ columns[i + 13];
-            columns[i + 15] = columns[i + 7] ^ columns[i + 14];
-        }
-
-        columns[56] = columns[48] ^ ror8(sub_word(columns[55])) ^ RCON[6];
-        columns[57] = columns[49] ^ columns[56];
-        columns[58] = columns[50] ^ columns[57];
-        columns[59] = columns[51] ^ columns[58];
-
-        expanded_keys
+    for (i, chunk) in key.chunks_exact(4).enumerate() {
+        columns[i] = u32::from_ne_bytes(chunk.try_into().unwrap());
     }
+
+    for i in (0..48).step_by(8) {
+        columns[i + 8] = columns[i + 0] ^ ror8(sub_word(columns[i + 7])) ^ RCON[i / 8];
+        columns[i + 9] = columns[i + 1] ^ columns[i + 8];
+        columns[i + 10] = columns[i + 2] ^ columns[i + 9];
+        columns[i + 11] = columns[i + 3] ^ columns[i + 10];
+        columns[i + 12] = columns[i + 4] ^ sub_word(columns[i + 11]);
+        columns[i + 13] = columns[i + 5] ^ columns[i + 12];
+        columns[i + 14] = columns[i + 6] ^ columns[i + 13];
+        columns[i + 15] = columns[i + 7] ^ columns[i + 14];
+    }
+
+    columns[56] = columns[48] ^ ror8(sub_word(columns[55])) ^ RCON[6];
+    columns[57] = columns[49] ^ columns[56];
+    columns[58] = columns[50] ^ columns[57];
+    columns[59] = columns[51] ^ columns[58];
+
+    expanded_keys
 }

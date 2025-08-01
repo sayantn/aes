@@ -36,6 +36,9 @@ jobs:
 
       - run: echo "RUSTFLAGS=-C target-feature=${{ inputs.target-features }}" >> $GITHUB_ENV
 
+      - name: Check
+        run: cargo check --target ${{ inputs.target }} ${{ inputs.extra-features }}
+
       - name: Clippy
         run: cargo clippy --target ${{ inputs.target }} ${{ inputs.extra-features }} --no-deps -- -D clippy::pedantic
 
