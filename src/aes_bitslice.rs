@@ -275,9 +275,8 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 16);
-        dst[..16].copy_from_slice(&self.0.to_ne_bytes());
+    pub const fn to_bytes(self) -> [u8; 16] {
+        self.0.to_ne_bytes()
     }
 
     #[inline]

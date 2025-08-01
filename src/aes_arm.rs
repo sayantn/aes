@@ -54,9 +54,8 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 16);
-        unsafe { vst1q_u8(dst.as_mut_ptr(), self.0) };
+    pub const fn to_bytes(self) -> [u8; 16] {
+        unsafe { mem::transmute(self) }
     }
 
     #[inline]

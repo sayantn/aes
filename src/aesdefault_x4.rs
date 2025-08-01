@@ -97,10 +97,8 @@ impl AesBlockX4 {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 64);
-        self.0.store_to(&mut dst[..32]);
-        self.1.store_to(&mut dst[32..]);
+    pub const fn to_bytes(self) -> [u8; 64] {
+        unsafe { core::mem::transmute([self.0.to_bytes(), self.1.to_bytes()]) }
     }
 
     #[inline]

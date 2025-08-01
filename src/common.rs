@@ -40,6 +40,13 @@ macro_rules! impl_common_ops {
             pub const fn zero() -> Self {
                 unsafe { core::mem::zeroed() }
             }
+
+            pub fn store_to(self, dst: &mut [u8]) {
+                assert!(dst.len() >= $key_len);
+                unsafe {
+                    *dst.as_mut_ptr().cast() = self.to_bytes();
+                }
+            }
         }
 
         impl From<[u8; $key_len]> for $name {
@@ -80,9 +87,7 @@ macro_rules! impl_common_ops {
         impl From<$name> for [u8; $key_len] {
             #[inline]
             fn from(value: $name) -> Self {
-                let mut dst = [0; $key_len];
-                value.store_to(&mut dst);
-                dst
+                value.to_bytes()
             }
         }
 
