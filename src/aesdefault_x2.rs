@@ -81,11 +81,6 @@ impl AesBlockX2 {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(AesBlock::zero(), AesBlock::zero())
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         self.0.is_zero() & self.1.is_zero()

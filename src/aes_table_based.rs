@@ -94,11 +94,6 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(0, 0, 0, 0)
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         (self.0 | self.1 | self.2 | self.3) == 0

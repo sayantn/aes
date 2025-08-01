@@ -60,11 +60,6 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(unsafe { vdupq_n_u8(0) })
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         #[cfg(not(target_arch = "arm"))]

@@ -120,11 +120,6 @@ impl AesBlockX4 {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(unsafe { _mm512_setzero_si512() })
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         unsafe { _mm512_test_epi64_mask(self.0, self.0) == 0 }

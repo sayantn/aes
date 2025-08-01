@@ -10,31 +10,6 @@ pub(crate) const fn array_from_slice<const N: usize>(value: &[u8], offset: usize
     unsafe { *value.as_ptr().add(offset).cast() }
 }
 
-impl PartialEq for AesBlock {
-    fn eq(&self, other: &Self) -> bool {
-        // This ensures constant-time equality
-        (*self ^ *other).is_zero()
-    }
-}
-
-impl Eq for AesBlock {}
-
-impl PartialEq for AesBlockX2 {
-    fn eq(&self, other: &Self) -> bool {
-        (*self ^ *other).is_zero()
-    }
-}
-
-impl Eq for AesBlockX2 {}
-
-impl PartialEq for AesBlockX4 {
-    fn eq(&self, other: &Self) -> bool {
-        (*self ^ *other).is_zero()
-    }
-}
-
-impl Eq for AesBlockX4 {}
-
 impl From<u128> for AesBlock {
     /// Returns an `AesBlock` corresponding to the big-endian byte-representation of `value`
     #[inline]
@@ -53,70 +28,84 @@ impl From<AesBlock> for u128 {
 
 macro_rules! impl_common_ops {
     ($($name:ty, $key_len:literal),*) => {$(
-    impl From<[u8; $key_len]> for $name {
-        /// The conversion of `u8` array to `AesBlock` is done using
-        #[inline]
-        fn from(value: [u8; $key_len]) -> Self {
-            Self::new(value)
-        }
-    }
-
-    impl Default for $name {
-        #[inline]
-        fn default() -> Self {
-            Self::zero()
-        }
-    }
-
-    impl From<&[u8; $key_len]> for $name {
-        #[inline]
-        fn from(value: &[u8; $key_len]) -> Self {
-            (*value).into()
-        }
-    }
-
-    impl TryFrom<&[u8]> for $name {
-        type Error = usize;
-
-        #[inline]
-        fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-            if value.len() >= $key_len {
-                Ok(array_from_slice(value, 0).into())
-            } else {
-                Err(value.len())
+        impl PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                (*self ^ *other).is_zero()
             }
         }
-    }
 
-    impl From<$name> for [u8; $key_len] {
-        #[inline]
-        fn from(value: $name) -> Self {
-            let mut dst = [0; $key_len];
-            value.store_to(&mut dst);
-            dst
-        }
-    }
+        impl Eq for $name {}
 
-    impl BitAndAssign for $name {
-        #[inline]
-        fn bitand_assign(&mut self, rhs: Self) {
-            *self = *self & rhs;
+        impl $name {
+            pub const fn zero() -> Self {
+                unsafe { core::mem::zeroed() }
+            }
         }
-    }
 
-    impl BitOrAssign for $name {
-        #[inline]
-        fn bitor_assign(&mut self, rhs: Self) {
-            *self = *self | rhs;
+        impl From<[u8; $key_len]> for $name {
+            /// The conversion of `u8` array to `AesBlock` is done using
+            #[inline]
+            fn from(value: [u8; $key_len]) -> Self {
+                Self::new(value)
+            }
         }
-    }
 
-    impl BitXorAssign for $name {
-        #[inline]
-        fn bitxor_assign(&mut self, rhs: Self) {
-            *self = *self ^ rhs;
+        impl Default for $name {
+            #[inline]
+            fn default() -> Self {
+                Self::zero()
+            }
         }
-    }
+
+        impl From<&[u8; $key_len]> for $name {
+            #[inline]
+            fn from(value: &[u8; $key_len]) -> Self {
+                (*value).into()
+            }
+        }
+
+        impl TryFrom<&[u8]> for $name {
+            type Error = usize;
+
+            #[inline]
+            fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+                if value.len() >= $key_len {
+                    Ok(array_from_slice(value, 0).into())
+                } else {
+                    Err(value.len())
+                }
+            }
+        }
+
+        impl From<$name> for [u8; $key_len] {
+            #[inline]
+            fn from(value: $name) -> Self {
+                let mut dst = [0; $key_len];
+                value.store_to(&mut dst);
+                dst
+            }
+        }
+
+        impl BitAndAssign for $name {
+            #[inline]
+            fn bitand_assign(&mut self, rhs: Self) {
+                *self = *self & rhs;
+            }
+        }
+
+        impl BitOrAssign for $name {
+            #[inline]
+            fn bitor_assign(&mut self, rhs: Self) {
+                *self = *self | rhs;
+            }
+        }
+
+        impl BitXorAssign for $name {
+            #[inline]
+            fn bitxor_assign(&mut self, rhs: Self) {
+                *self = *self ^ rhs;
+            }
+        }
     )*};
 }
 
