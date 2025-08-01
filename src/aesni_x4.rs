@@ -115,6 +115,7 @@ impl AesBlockX4 {
     }
 
     #[inline]
+    #[must_use]
     pub const fn to_bytes(self) -> [u8; 64] {
         unsafe { mem::transmute(self) }
     }
