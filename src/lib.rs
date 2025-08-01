@@ -47,7 +47,6 @@
     clippy::inline_always,
     clippy::similar_names,
     clippy::doc_markdown,
-    clippy::missing_panics_doc,
     clippy::wildcard_imports
 )]
 

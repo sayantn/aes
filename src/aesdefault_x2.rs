@@ -75,6 +75,7 @@ impl AesBlockX2 {
     }
 
     #[inline]
+    #[must_use]
     pub const fn to_bytes(self) -> [u8; 32] {
         unsafe { mem::transmute([self.0.to_bytes(), self.1.to_bytes()]) }
     }

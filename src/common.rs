@@ -41,6 +41,10 @@ macro_rules! impl_common_ops {
                 unsafe { core::mem::zeroed() }
             }
 
+            /// Stores the byte representation of the block to `dst`
+            ///
+            /// # Panics
+            /// If `dst` doesn't have enough space, i.e. 16 bytes for [AesBlock], 32 bytes for [AesBlockX2] and 64 bytes for [AesBlockX4]
             pub fn store_to(self, dst: &mut [u8]) {
                 assert!(dst.len() >= $key_len);
                 unsafe {

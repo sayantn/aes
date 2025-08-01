@@ -99,6 +99,7 @@ impl AesBlock {
     }
 
     #[inline]
+    #[must_use]
     pub const fn to_bytes(self) -> [u8; 16] {
         unsafe { mem::transmute(self) }
     }
