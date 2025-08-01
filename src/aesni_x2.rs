@@ -85,11 +85,6 @@ impl AesBlockX2 {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(unsafe { _mm256_setzero_si256() })
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         unsafe { _mm256_testz_si256(self.0, self.0) == 1 }

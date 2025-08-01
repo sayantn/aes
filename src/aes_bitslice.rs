@@ -281,11 +281,6 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(0)
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         self.0 == 0

@@ -80,11 +80,6 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        [0; 16].into()
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         0_u64 == unsafe { simd_reduce_or(self.0) }

@@ -59,11 +59,6 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn zero() -> Self {
-        Self(unsafe { _mm_setzero_si128() })
-    }
-
-    #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
         unsafe { _mm_testz_si128(self.0, self.0) == 1 }
