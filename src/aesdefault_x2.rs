@@ -74,10 +74,8 @@ impl AesBlockX2 {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 32);
-        self.0.store_to(&mut dst[..16]);
-        self.1.store_to(&mut dst[16..]);
+    pub const fn to_bytes(self) -> [u8; 32] {
+        unsafe { core::mem::transmute([self.0.to_bytes(), self.1.to_bytes()]) }
     }
 
     #[inline]

@@ -14,14 +14,6 @@ const fn load_u32_be(slice: &[u8], offset: usize) -> u32 {
         | (slice[offset + 3] as u32)
 }
 
-#[inline(always)]
-fn store_u32_be(slice: &mut [u8], num: u32) {
-    slice[0] = (num >> 24) as u8;
-    slice[1] = (num >> 16) as u8;
-    slice[2] = (num >> 8) as u8;
-    slice[3] = num as u8;
-}
-
 impl BitAnd for AesBlock {
     type Output = Self;
 
@@ -85,12 +77,15 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 16);
-        store_u32_be(dst, self.0);
-        store_u32_be(&mut dst[4..], self.1);
-        store_u32_be(&mut dst[8..], self.2);
-        store_u32_be(&mut dst[12..], self.3);
+    pub const fn to_bytes(self) -> [u8; 16] {
+        unsafe {
+            core::mem::transmute([
+                self.0.to_be_bytes(),
+                self.1.to_be_bytes(),
+                self.2.to_be_bytes(),
+                self.3.to_be_bytes(),
+            ])
+        }
     }
 
     #[inline]

@@ -114,9 +114,8 @@ impl AesBlockX4 {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 64);
-        unsafe { _mm512_storeu_si512(dst.as_mut_ptr().cast(), self.0) };
+    pub const fn to_bytes(self) -> [u8; 64] {
+        unsafe { core::mem::transmute(self) }
     }
 
     #[inline]

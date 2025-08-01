@@ -72,11 +72,8 @@ impl AesBlock {
     }
 
     #[inline]
-    pub fn store_to(self, dst: &mut [u8]) {
-        assert!(dst.len() >= 16);
-        unsafe {
-            *dst.as_mut_ptr().cast() = mem::transmute::<_, u128>(self).to_be_bytes();
-        }
+    pub const fn to_bytes(self) -> [u8; 16] {
+        unsafe { mem::transmute::<_, u128>(self).to_be_bytes() }
     }
 
     #[inline]
