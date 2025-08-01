@@ -1,4 +1,6 @@
 #![allow(clippy::unreadable_literal, clippy::cast_possible_truncation)]
+use crate::common::array_from_slice;
+use core::mem;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 #[derive(Copy, Clone)]
@@ -79,7 +81,7 @@ impl AesBlock {
     #[inline]
     pub const fn to_bytes(self) -> [u8; 16] {
         unsafe {
-            core::mem::transmute([
+            mem::transmute([
                 self.0.to_be_bytes(),
                 self.1.to_be_bytes(),
                 self.2.to_be_bytes(),
@@ -312,8 +314,8 @@ pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
 }
 
 pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
-    let key0 = AesBlock::try_from(&key[..16]).unwrap();
-    let key1 = AesBlock::try_from(&key[16..]).unwrap();
+    let key0 = AesBlock::from(array_from_slice(&key, 0));
+    let key1 = AesBlock::from(array_from_slice(&key, 16));
 
     let key2 = keyexp_256_1::<0x01000000>(key0, key1);
     let key3 = keyexp_256_2(key1, key2);

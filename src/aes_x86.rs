@@ -1,7 +1,9 @@
+use crate::common::array_from_slice;
 #[cfg(target_arch = "x86")]
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
+use core::mem;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 #[derive(Copy, Clone)]
@@ -49,12 +51,12 @@ impl AesBlock {
     #[inline]
     pub const fn new(value: [u8; 16]) -> Self {
         // using transmute in simd is safe
-        unsafe { core::mem::transmute(value) }
+        unsafe { mem::transmute(value) }
     }
 
     #[inline]
     pub const fn to_bytes(self) -> [u8; 16] {
-        unsafe { core::mem::transmute(self) }
+        unsafe { mem::transmute(self) }
     }
 
     #[inline]
@@ -169,7 +171,7 @@ pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
 }
 
 pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
-    let key0 = AesBlock::try_from(&key[..16]).unwrap();
+    let key0 = AesBlock::from(array_from_slice(&key, 0));
     let mut key_block = [0; 16];
     key_block[..8].copy_from_slice(&key[16..]);
     key_block[8..].fill(0);
@@ -187,8 +189,8 @@ pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
 }
 
 pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
-    let key0 = AesBlock::try_from(&key[..16]).unwrap();
-    let key1 = AesBlock::try_from(&key[16..]).unwrap();
+    let key0 = AesBlock::from(array_from_slice(&key, 0));
+    let key1 = AesBlock::from(array_from_slice(&key, 16));
 
     let key2 = keyexp_256_1::<0x01>(key0, key1);
     let key3 = keyexp_256_2(key1, key2);

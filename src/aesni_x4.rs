@@ -2,6 +2,7 @@
 use core::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
+use core::mem;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
 
 use crate::{AesBlock, AesBlockX2};
@@ -110,12 +111,12 @@ impl Not for AesBlockX4 {
 impl AesBlockX4 {
     #[inline]
     pub const fn new(value: [u8; 64]) -> Self {
-        unsafe { core::mem::transmute(value) }
+        unsafe { mem::transmute(value) }
     }
 
     #[inline]
     pub const fn to_bytes(self) -> [u8; 64] {
-        unsafe { core::mem::transmute(self) }
+        unsafe { mem::transmute(self) }
     }
 
     #[inline]
