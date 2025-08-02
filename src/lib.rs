@@ -42,6 +42,7 @@
 )]
 #![deny(warnings)]
 #![allow(
+    stable_features, // TODO: remove after 1.89 rolls out
     internal_features,
     clippy::identity_op,
     clippy::inline_always,
