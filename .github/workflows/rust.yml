@@ -30,7 +30,7 @@ jobs:
     with:
       target: ${{ matrix.target }}
       channel: ${{ matrix.channel }}
-      target-features: +sse4.1,+aes
+      target-features: +aes
 
   test-aesni-vaes:
     strategy:
