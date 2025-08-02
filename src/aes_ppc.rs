@@ -92,14 +92,14 @@ impl AesBlock {
 
     /// `InvShiftRows`->`InvSubBytes`->`AddRoundKey`->`InvMixColumns`
     #[inline]
-    pub(crate) fn dec2(self, round_key: Self) -> Self {
+    pub(crate) fn raw_dec(self, round_key: Self) -> Self {
         Self(unsafe { vncipher(self.0, round_key.0) })
     }
 
     /// Performs one round of AES decryption function (`InvShiftRows`->`InvSubBytes`->`InvMixColumns`->`AddRoundKey`)
     #[inline]
     pub fn dec(self, round_key: Self) -> Self {
-        self.dec2(Self::zero()) ^ round_key
+        self.raw_dec(Self::zero()) ^ round_key
     }
 
     /// Performs one round of AES encryption function without `MixColumns` (`ShiftRows`->`SubBytes`->`AddRoundKey`)
