@@ -3,7 +3,6 @@ use core::fmt;
 use core::fmt::{Binary, Debug, Display, Formatter, LowerHex, UpperHex};
 use core::ops::{BitAndAssign, BitOrAssign, BitXorAssign};
 
-#[allow(unused)]
 #[inline(always)]
 pub(crate) const fn array_from_slice<const N: usize>(value: &[u8], offset: usize) -> [u8; N] {
     debug_assert!(value.len() - offset >= N);
@@ -44,6 +43,12 @@ impl PartialEq for AesBlockX2 {
     }
 }
 
+#[cfg(not(all(
+    feature = "nightly",
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "vaes",
+    target_feature = "avx512f"
+)))]
 impl PartialEq for AesBlockX4 {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
