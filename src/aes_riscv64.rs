@@ -123,95 +123,103 @@ impl AesBlock {
 }
 
 #[inline(always)]
-fn keyexp_128<const RNUM: u8>(prev: AesBlock) -> AesBlock {
-    keyexp_256_1::<RNUM>(prev, prev)
+fn keyexp_128<const RNUM: u8>(a: u64, b: u64) -> (u64, u64) {
+    keyexp_256_1::<RNUM>(a, b, b)
 }
 
 #[inline(always)]
-fn keyexp_192<const RNUM: u8>((a, b, c): (u64, u64, u64)) -> (u64, u64, u64) {
-    unsafe {
-        let a = aes64ks2(aes64ks1i::<RNUM>(c), a);
-        let b = aes64ks2(a, b);
-        (a, b, aes64ks2(b, c))
-    }
+fn keyexp_192<const RNUM: u8>(a: u64, b: u64, c: u64) -> (u64, u64, u64) {
+    let (a, b) = keyexp_256_1::<RNUM>(a, b, c);
+    (a, b, unsafe { aes64ks2(b, c) })
 }
 
 #[inline(always)]
-fn keyexp_256_1<const RNUM: u8>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    unsafe {
-        let tmp = aes64ks2(aes64ks1i(prev1.1, RNUM), prev0.0);
-        AesBlock(tmp, aes64ks2(tmp, prev0.1))
-    }
+fn keyexp_256_1<const RNUM: u8>(a: u64, b: u64, d: u64) -> (u64, u64) {
+    let a = unsafe { aes64ks2(aes64ks1i(d, RNUM), a) };
+    (a, unsafe { aes64ks2(a, b) })
 }
 
 #[inline(always)]
-fn keyexp_256_2(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    keyexp_256_1::<10>(prev0, prev1)
+fn keyexp_256_2(a: u64, b: u64, d: u64) -> (u64, u64) {
+    keyexp_256_1::<10>(a, b, d)
 }
 
 pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
-    let key0 = AesBlock::from(key);
-    let key1 = keyexp_128::<0>(key0);
-    let key2 = keyexp_128::<1>(key1);
-    let key3 = keyexp_128::<2>(key2);
-    let key4 = keyexp_128::<3>(key3);
-    let key5 = keyexp_128::<4>(key4);
-    let key6 = keyexp_128::<5>(key5);
-    let key7 = keyexp_128::<6>(key6);
-    let key8 = keyexp_128::<7>(key7);
-    let key9 = keyexp_128::<8>(key8);
-    let key10 = keyexp_128::<9>(key9);
+    let (key0, key1) = (
+        u64::from_ne_bytes(array_from_slice(&key, 0)),
+        u64::from_ne_bytes(array_from_slice(&key, 8)),
+    );
+    let (key2, key3) = keyexp_128::<0>(key0, key1);
+    let (key4, key5) = keyexp_128::<1>(key2, key3);
+    let (key6, key7) = keyexp_128::<2>(key4, key5);
+    let (key8, key9) = keyexp_128::<3>(key6, key7);
+    let (key10, key11) = keyexp_128::<4>(key8, key9);
+    let (key12, key13) = keyexp_128::<5>(key10, key11);
+    let (key14, key15) = keyexp_128::<6>(key12, key13);
+    let (key16, key17) = keyexp_128::<7>(key14, key15);
+    let (key18, key19) = keyexp_128::<8>(key16, key17);
+    let (key20, key21) = keyexp_128::<9>(key18, key19);
 
-    [
-        key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10,
-    ]
+    unsafe {
+        mem::transmute([
+            key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13,
+            key14, key15, key16, key17, key18, key19, key20, key21,
+        ])
+    }
 }
 
 #[allow(clippy::cast_possible_truncation)]
 pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
-    let state0 = (
-        u64::from_le_bytes(array_from_slice(&key, 0)),
-        u64::from_le_bytes(array_from_slice(&key, 8)),
-        u64::from_le_bytes(array_from_slice(&key, 16)),
+    let (key0, key1, key2) = (
+        u64::from_ne_bytes(array_from_slice(&key, 0)),
+        u64::from_ne_bytes(array_from_slice(&key, 8)),
+        u64::from_ne_bytes(array_from_slice(&key, 16)),
     );
 
-    let state1 = keyexp_192::<0>(state0);
-    let state2 = keyexp_192::<1>(state1);
-    let state3 = keyexp_192::<2>(state2);
-    let state4 = keyexp_192::<3>(state3);
-    let state5 = keyexp_192::<4>(state4);
-    let state6 = keyexp_192::<5>(state5);
-    let state7 = keyexp_192::<6>(state6);
-    let state24 = unsafe { aes64ks2(aes64ks1i(state7.2, 7), state7.0) };
-    let state25 = unsafe { aes64ks2(state24, state7.1) };
+    let (key3, key4, key5) = keyexp_192::<0>(key0, key1, key2);
+    let (key6, key7, key8) = keyexp_192::<1>(key3, key4, key5);
+    let (key9, key10, key11) = keyexp_192::<2>(key6, key7, key8);
+    let (key12, key13, key14) = keyexp_192::<3>(key9, key10, key11);
+    let (key15, key16, key17) = keyexp_192::<4>(key12, key13, key14);
+    let (key18, key19, key20) = keyexp_192::<5>(key15, key16, key17);
+    let (key21, key22, key23) = keyexp_192::<6>(key18, key19, key20);
+    let (key24, key25) = keyexp_256_1::<7>(key21, key22, key23);
 
     unsafe {
-        mem::transmute((
-            state0, state1, state2, state3, state4, state5, state6, state7, state24, state25,
-        ))
+        mem::transmute([
+            key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13,
+            key14, key15, key16, key17, key18, key19, key20, key21, key22, key23, key24, key25,
+        ])
     }
 }
 
 pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
-    let key0 = AesBlock::from(array_from_slice(&key, 0));
-    let key1 = AesBlock::from(array_from_slice(&key, 16));
+    let (key0, key1, key2, key3) = (
+        u64::from_ne_bytes(array_from_slice(&key, 0)),
+        u64::from_ne_bytes(array_from_slice(&key, 8)),
+        u64::from_ne_bytes(array_from_slice(&key, 16)),
+        u64::from_ne_bytes(array_from_slice(&key, 24)),
+    );
 
-    let key2 = keyexp_256_1::<0>(key0, key1);
-    let key3 = keyexp_256_2(key1, key2);
-    let key4 = keyexp_256_1::<1>(key2, key3);
-    let key5 = keyexp_256_2(key3, key4);
-    let key6 = keyexp_256_1::<2>(key4, key5);
-    let key7 = keyexp_256_2(key5, key6);
-    let key8 = keyexp_256_1::<3>(key6, key7);
-    let key9 = keyexp_256_2(key7, key8);
-    let key10 = keyexp_256_1::<4>(key8, key9);
-    let key11 = keyexp_256_2(key9, key10);
-    let key12 = keyexp_256_1::<5>(key10, key11);
-    let key13 = keyexp_256_2(key11, key12);
-    let key14 = keyexp_256_1::<6>(key12, key13);
+    let (key4, key5) = keyexp_256_1::<0>(key0, key1, key3);
+    let (key6, key7) = keyexp_256_2(key2, key3, key5);
+    let (key8, key9) = keyexp_256_1::<1>(key4, key5, key7);
+    let (key10, key11) = keyexp_256_2(key6, key7, key9);
+    let (key12, key13) = keyexp_256_1::<2>(key8, key9, key11);
+    let (key14, key15) = keyexp_256_2(key10, key11, key13);
+    let (key16, key17) = keyexp_256_1::<3>(key12, key13, key15);
+    let (key18, key19) = keyexp_256_2(key14, key15, key17);
+    let (key20, key21) = keyexp_256_1::<4>(key16, key17, key19);
+    let (key22, key23) = keyexp_256_2(key18, key19, key21);
+    let (key24, key25) = keyexp_256_1::<5>(key20, key21, key23);
+    let (key26, key27) = keyexp_256_2(key22, key23, key25);
+    let (key28, key29) = keyexp_256_1::<6>(key24, key25, key27);
 
-    [
-        key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13,
-        key14,
-    ]
+    unsafe {
+        mem::transmute([
+            key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13,
+            key14, key15, key16, key17, key18, key19, key20, key21, key22, key23, key24, key25,
+            key26, key27, key28, key29,
+        ])
+    }
 }

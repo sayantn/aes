@@ -1,20 +1,12 @@
 #![allow(clippy::unreadable_literal, clippy::cast_possible_truncation)]
 use crate::common::array_from_slice;
-use core::mem;
 use core::ops::{BitAnd, BitOr, BitXor, Not};
+use core::{mem, slice};
 
 #[derive(Copy, Clone)]
 #[repr(C, align(16))]
 #[must_use]
 pub struct AesBlock(u32, u32, u32, u32);
-
-#[inline(always)]
-const fn load_u32_be(slice: &[u8], offset: usize) -> u32 {
-    ((slice[offset + 0] as u32) << 24)
-        | ((slice[offset + 1] as u32) << 16)
-        | ((slice[offset + 2] as u32) << 8)
-        | (slice[offset + 3] as u32)
-}
 
 impl BitAnd for AesBlock {
     type Output = Self;
@@ -71,10 +63,10 @@ impl AesBlock {
     #[inline]
     pub const fn new(value: [u8; 16]) -> Self {
         Self(
-            load_u32_be(&value, 0),
-            load_u32_be(&value, 4),
-            load_u32_be(&value, 8),
-            load_u32_be(&value, 12),
+            u32::from_be_bytes(array_from_slice(&value, 0)),
+            u32::from_be_bytes(array_from_slice(&value, 4)),
+            u32::from_be_bytes(array_from_slice(&value, 8)),
+            u32::from_be_bytes(array_from_slice(&value, 12)),
         )
     }
 
@@ -220,122 +212,95 @@ impl AesBlock {
     }
 }
 
+const RCON: [u32; 10] = [
+    0x0100_0000,
+    0x0200_0000,
+    0x0400_0000,
+    0x0800_0000,
+    0x1000_0000,
+    0x2000_0000,
+    0x4000_0000,
+    0x8000_0000,
+    0x1b00_0000,
+    0x3600_0000,
+];
+
 #[inline(always)]
 fn sub_word(x: u32) -> u32 {
     te4_0(x >> 16) | te4_1(x >> 8) | te4_2(x) | te4_3(x >> 24)
 }
 
-fn keyexp_128(prev_rkey: AesBlock, rcon: u32) -> AesBlock {
-    let k0 = prev_rkey.0 ^ sub_word(prev_rkey.3) ^ rcon;
-    let k1 = prev_rkey.1 ^ k0;
-    let k2 = prev_rkey.2 ^ k1;
-    let k3 = prev_rkey.3 ^ k2;
-    AesBlock(k0, k1, k2, k3)
-}
-
-fn keyexp_192(prev: [u32; 6], rcon: u32) -> [u32; 6] {
-    let k0 = prev[0] ^ sub_word(prev[5]) ^ rcon;
-    let k1 = prev[1] ^ k0;
-    let k2 = prev[2] ^ k1;
-    let k3 = prev[3] ^ k2;
-    let k4 = prev[4] ^ k3;
-    let k5 = prev[5] ^ k4;
-
-    [k0, k1, k2, k3, k4, k5]
-}
-
-fn keyexp_256_1(prev0: AesBlock, prev1: AesBlock, rcon: u32) -> AesBlock {
-    let k0 = prev0.0 ^ sub_word(prev1.3) ^ rcon;
-    let k1 = prev0.1 ^ k0;
-    let k2 = prev0.2 ^ k1;
-    let k3 = prev0.3 ^ k2;
-    AesBlock(k0, k1, k2, k3)
-}
-
-fn keyexp_256_2(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    let k0 = prev0.0 ^ sub_word(prev1.3.rotate_right(8));
-    let k1 = prev0.1 ^ k0;
-    let k2 = prev0.2 ^ k1;
-    let k3 = prev0.3 ^ k2;
-    AesBlock(k0, k1, k2, k3)
-}
-
 pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
-    let key0 = key.into();
-    let key1 = keyexp_128(key0, 0x01000000);
-    let key2 = keyexp_128(key1, 0x02000000);
-    let key3 = keyexp_128(key2, 0x04000000);
-    let key4 = keyexp_128(key3, 0x08000000);
-    let key5 = keyexp_128(key4, 0x10000000);
-    let key6 = keyexp_128(key5, 0x20000000);
-    let key7 = keyexp_128(key6, 0x40000000);
-    let key8 = keyexp_128(key7, 0x80000000);
-    let key9 = keyexp_128(key8, 0x1b000000);
-    let key10 = keyexp_128(key9, 0x36000000);
+    let mut expanded_keys = [AesBlock::zero(); 11];
 
-    [
-        key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10,
-    ]
+    let columns = unsafe { slice::from_raw_parts_mut(expanded_keys.as_mut_ptr().cast(), 44) };
+
+    for (i, chunk) in key.chunks_exact(4).enumerate() {
+        columns[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+    }
+
+    for i in (0..40).step_by(4) {
+        columns[i + 4] = columns[i + 0] ^ sub_word(columns[i + 3]) ^ RCON[i / 4];
+        columns[i + 5] = columns[i + 1] ^ columns[i + 4];
+        columns[i + 6] = columns[i + 2] ^ columns[i + 5];
+        columns[i + 7] = columns[i + 3] ^ columns[i + 6];
+    }
+
+    expanded_keys
 }
 
 pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
-    let k = [
-        load_u32_be(&key, 0),
-        load_u32_be(&key, 4),
-        load_u32_be(&key, 8),
-        load_u32_be(&key, 12),
-        load_u32_be(&key, 16),
-        load_u32_be(&key, 20),
-    ];
-    let key0 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192(k, 0x01000000);
-    let key1 = AesBlock(k[4], k[5], p[0], p[1]);
-    let key2 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192(p, 0x02000000);
-    let key3 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192(k, 0x04000000);
-    let key4 = AesBlock(k[4], k[5], p[0], p[1]);
-    let key5 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192(p, 0x08000000);
-    let key6 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192(k, 0x10000000);
-    let key7 = AesBlock(k[4], k[5], p[0], p[1]);
-    let key8 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192(p, 0x20000000);
-    let key9 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192(k, 0x40000000);
-    let key10 = AesBlock(k[4], k[5], p[0], p[1]);
-    let key11 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192(p, 0x80000000);
-    let key12 = AesBlock(k[0], k[1], k[2], k[3]);
+    let mut expanded_keys = [AesBlock::zero(); 13];
 
-    [
-        key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12,
-    ]
+    let columns = unsafe { slice::from_raw_parts_mut(expanded_keys.as_mut_ptr().cast(), 52) };
+
+    for (i, chunk) in key.chunks_exact(4).enumerate() {
+        columns[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+    }
+
+    for i in (0..42).step_by(6) {
+        columns[i + 6] = columns[i + 0] ^ sub_word(columns[i + 5]) ^ RCON[i / 6];
+        columns[i + 7] = columns[i + 1] ^ columns[i + 6];
+        columns[i + 8] = columns[i + 2] ^ columns[i + 7];
+        columns[i + 9] = columns[i + 3] ^ columns[i + 8];
+        columns[i + 10] = columns[i + 4] ^ columns[i + 9];
+        columns[i + 11] = columns[i + 5] ^ columns[i + 10];
+    }
+
+    columns[48] = columns[42] ^ sub_word(columns[47]) ^ RCON[7];
+    columns[49] = columns[43] ^ columns[48];
+    columns[50] = columns[44] ^ columns[49];
+    columns[51] = columns[45] ^ columns[50];
+
+    expanded_keys
 }
 
 pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
-    let key0 = AesBlock::from(array_from_slice(&key, 0));
-    let key1 = AesBlock::from(array_from_slice(&key, 16));
+    let mut expanded_keys = [AesBlock::zero(); 15];
 
-    let key2 = keyexp_256_1(key0, key1, 0x01000000);
-    let key3 = keyexp_256_2(key1, key2);
-    let key4 = keyexp_256_1(key2, key3, 0x02000000);
-    let key5 = keyexp_256_2(key3, key4);
-    let key6 = keyexp_256_1(key4, key5, 0x04000000);
-    let key7 = keyexp_256_2(key5, key6);
-    let key8 = keyexp_256_1(key6, key7, 0x08000000);
-    let key9 = keyexp_256_2(key7, key8);
-    let key10 = keyexp_256_1(key8, key9, 0x10000000);
-    let key11 = keyexp_256_2(key9, key10);
-    let key12 = keyexp_256_1(key10, key11, 0x20000000);
-    let key13 = keyexp_256_2(key11, key12);
-    let key14 = keyexp_256_1(key12, key13, 0x40000000);
+    let columns = unsafe { slice::from_raw_parts_mut(expanded_keys.as_mut_ptr().cast(), 60) };
 
-    [
-        key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13,
-        key14,
-    ]
+    for (i, chunk) in key.chunks_exact(4).enumerate() {
+        columns[i] = u32::from_be_bytes(chunk.try_into().unwrap());
+    }
+
+    for i in (0..48).step_by(8) {
+        columns[i + 8] = columns[i + 0] ^ sub_word(columns[i + 7]) ^ RCON[i / 8];
+        columns[i + 9] = columns[i + 1] ^ columns[i + 8];
+        columns[i + 10] = columns[i + 2] ^ columns[i + 9];
+        columns[i + 11] = columns[i + 3] ^ columns[i + 10];
+        columns[i + 12] = columns[i + 4] ^ sub_word(columns[i + 11].rotate_right(8));
+        columns[i + 13] = columns[i + 5] ^ columns[i + 12];
+        columns[i + 14] = columns[i + 6] ^ columns[i + 13];
+        columns[i + 15] = columns[i + 7] ^ columns[i + 14];
+    }
+
+    columns[56] = columns[48] ^ sub_word(columns[55]) ^ RCON[6];
+    columns[57] = columns[49] ^ columns[56];
+    columns[58] = columns[50] ^ columns[57];
+    columns[59] = columns[51] ^ columns[58];
+
+    expanded_keys
 }
 
 macro_rules! declare {
