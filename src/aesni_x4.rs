@@ -12,6 +12,13 @@ use crate::{AesBlock, AesBlockX2};
 #[must_use]
 pub struct AesBlockX4(__m512i);
 
+impl PartialEq for AesBlockX4 {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { _mm512_cmpeq_epi64_mask(self.0, other.0) == 0xff }
+    }
+}
+
 impl From<(AesBlock, AesBlock, AesBlock, AesBlock)> for AesBlockX4 {
     #[inline]
     #[allow(clippy::many_single_char_names)]
