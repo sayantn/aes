@@ -56,6 +56,51 @@ impl PartialEq for AesBlockX4 {
     }
 }
 
+impl From<[AesBlock; 2]> for AesBlockX2 {
+    #[inline]
+    fn from([a, b]: [AesBlock; 2]) -> Self {
+        (a, b).into()
+    }
+}
+
+impl From<AesBlockX2> for [AesBlock; 2] {
+    #[inline]
+    fn from(value: AesBlockX2) -> Self {
+        let (a, b) = value.into();
+        [a, b]
+    }
+}
+
+impl From<[AesBlockX2; 2]> for AesBlockX4 {
+    #[inline]
+    fn from([a, b]: [AesBlockX2; 2]) -> Self {
+        (a, b).into()
+    }
+}
+
+impl From<AesBlockX4> for [AesBlockX2; 2] {
+    #[inline]
+    fn from(value: AesBlockX4) -> Self {
+        let (a, b) = value.into();
+        [a, b]
+    }
+}
+
+impl From<[AesBlock; 4]> for AesBlockX4 {
+    #[inline]
+    fn from([a, b, c, d]: [AesBlock; 4]) -> Self {
+        (a, b, c, d).into()
+    }
+}
+
+impl From<AesBlockX4> for [AesBlock; 4] {
+    #[inline]
+    fn from(value: AesBlockX4) -> Self {
+        let (a, b, c, d) = value.into();
+        [a, b, c, d]
+    }
+}
+
 macro_rules! impl_common_ops {
     ($($name:ty, $key_len:literal),*) => {$(
         impl Eq for $name {}
