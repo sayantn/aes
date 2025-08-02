@@ -29,6 +29,7 @@ impl From<AesBlock> for u128 {
 macro_rules! impl_common_ops {
     ($($name:ty, $key_len:literal),*) => {$(
         impl PartialEq for $name {
+            #[inline]
             fn eq(&self, other: &Self) -> bool {
                 (*self ^ *other).is_zero()
             }
@@ -37,6 +38,7 @@ macro_rules! impl_common_ops {
         impl Eq for $name {}
 
         impl $name {
+            #[inline]
             pub const fn zero() -> Self {
                 unsafe { core::mem::zeroed() }
             }
@@ -45,6 +47,7 @@ macro_rules! impl_common_ops {
             ///
             /// # Panics
             /// If `dst` doesn't have enough space, i.e. 16 bytes for [AesBlock], 32 bytes for [AesBlockX2] and 64 bytes for [AesBlockX4]
+            #[inline]
             pub fn store_to(self, dst: &mut [u8]) {
                 assert!(dst.len() >= $key_len);
                 unsafe {
