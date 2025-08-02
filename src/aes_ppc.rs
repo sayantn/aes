@@ -74,7 +74,8 @@ impl AesBlock {
     #[inline]
     #[must_use]
     pub const fn to_bytes(self) -> [u8; 16] {
-        unsafe { mem::transmute::<_, u128>(self).to_be_bytes() }
+        let a: u128 = unsafe { mem::transmute(self) };
+        a.to_be_bytes()
     }
 
     #[inline]
@@ -131,12 +132,9 @@ impl AesBlock {
 #[inline(always)]
 fn sub_word(input: u32) -> u32 {
     unsafe {
-        let input = mem::transmute([input; 4]);
-
-        // AES single round encryption (with a round key of all zeros)
-        let sub_input = vsbox(input);
-
-        vec_extract::<_, 0>(mem::transmute::<_, vector_unsigned_int>(sub_input))
+        let a: vector_unsigned_long = mem::transmute([input; 4]);
+        let a: vector_unsigned_int = mem::transmute(vsbox(a));
+        vec_extract::<_, 0>(a)
     }
 }
 
