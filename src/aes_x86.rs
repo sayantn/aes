@@ -114,15 +114,20 @@ impl AesBlock {
     }
 
     #[inline(always)]
-    fn keygenassist<const RCON: i32, const SHUFFLE: i32>(self) -> Self {
-        Self(unsafe { _mm_shuffle_epi32::<SHUFFLE>(_mm_aeskeygenassist_si128::<RCON>(self.0)) })
+    fn shuffle<const SHUFFLE: i32>(self) -> Self {
+        Self(unsafe { _mm_shuffle_epi32::<SHUFFLE>(self.0) })
+    }
+
+    #[inline(always)]
+    fn keygenassist<const RCON: i32>(self) -> Self {
+        Self(unsafe { _mm_aeskeygenassist_si128::<RCON>(self.0) })
     }
 }
 
 // The key expansion code is taken from the Intel whitepaper
 
 fn keyexp_128<const RCON: i32>(prev_rkey: AesBlock) -> AesBlock {
-    prev_rkey.mix() ^ prev_rkey.keygenassist::<RCON, 0xff>()
+    prev_rkey.mix() ^ prev_rkey.keygenassist::<RCON>().shuffle::<0xff>()
 }
 
 fn keyexp_192<const RCON1: i32, const RCON2: i32>(
@@ -130,8 +135,8 @@ fn keyexp_192<const RCON1: i32, const RCON2: i32>(
 ) -> (AesBlock, AesBlock, AesBlock) {
     #[inline(always)]
     fn fwd<const RCON: i32>(state1: &mut AesBlock, state2: &mut AesBlock) {
-        *state1 = state1.mix() ^ state2.keygenassist::<RCON, 0x55>();
-        *state2 ^= state2.shl::<4>() ^ AesBlock(unsafe { _mm_shuffle_epi32::<0xff>(state1.0) });
+        *state1 = state1.mix() ^ state2.keygenassist::<RCON>().shuffle::<0x55>();
+        *state2 ^= state2.shl::<4>() ^ state1.shuffle::<0xff>();
     }
     let prev_state = state2.0;
 
@@ -146,11 +151,11 @@ fn keyexp_192<const RCON1: i32, const RCON2: i32>(
 }
 
 fn keyexp_256_1<const RCON: i32>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    prev0.mix() ^ prev1.keygenassist::<RCON, 0xff>()
+    prev0.mix() ^ prev1.keygenassist::<RCON>().shuffle::<0xff>()
 }
 
 fn keyexp_256_2(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    prev0.mix() ^ prev1.keygenassist::<0, 0xaa>()
+    prev0.mix() ^ prev1.keygenassist::<0>().shuffle::<0xaa>()
 }
 
 pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
