@@ -315,7 +315,7 @@ macro_rules! implement_aes {
                     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
                         let mut acc = ciphertext ^ self.round_keys[$nr];
                         for &drk in self.round_keys[1..$nr].iter().rev() {
-                            acc = acc.dec2(drk);
+                            acc = acc.raw_dec(drk);
                         }
                         acc.dec_last(self.round_keys[0])
                     }
