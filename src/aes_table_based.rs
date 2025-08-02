@@ -225,16 +225,16 @@ fn sub_word(x: u32) -> u32 {
     te4_0(x >> 16) | te4_1(x >> 8) | te4_2(x) | te4_3(x >> 24)
 }
 
-fn keyexp_128<const RCON: u32>(prev_rkey: AesBlock) -> AesBlock {
-    let k0 = prev_rkey.0 ^ sub_word(prev_rkey.3) ^ RCON;
+fn keyexp_128(prev_rkey: AesBlock, rcon: u32) -> AesBlock {
+    let k0 = prev_rkey.0 ^ sub_word(prev_rkey.3) ^ rcon;
     let k1 = prev_rkey.1 ^ k0;
     let k2 = prev_rkey.2 ^ k1;
     let k3 = prev_rkey.3 ^ k2;
     AesBlock(k0, k1, k2, k3)
 }
 
-fn keyexp_192<const RCON: u32>(prev: [u32; 6]) -> [u32; 6] {
-    let k0 = prev[0] ^ sub_word(prev[5]) ^ RCON;
+fn keyexp_192(prev: [u32; 6], rcon: u32) -> [u32; 6] {
+    let k0 = prev[0] ^ sub_word(prev[5]) ^ rcon;
     let k1 = prev[1] ^ k0;
     let k2 = prev[2] ^ k1;
     let k3 = prev[3] ^ k2;
@@ -244,8 +244,8 @@ fn keyexp_192<const RCON: u32>(prev: [u32; 6]) -> [u32; 6] {
     [k0, k1, k2, k3, k4, k5]
 }
 
-fn keyexp_256_1<const RCON: u32>(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
-    let k0 = prev0.0 ^ sub_word(prev1.3) ^ RCON;
+fn keyexp_256_1(prev0: AesBlock, prev1: AesBlock, rcon: u32) -> AesBlock {
+    let k0 = prev0.0 ^ sub_word(prev1.3) ^ rcon;
     let k1 = prev0.1 ^ k0;
     let k2 = prev0.2 ^ k1;
     let k3 = prev0.3 ^ k2;
@@ -262,16 +262,16 @@ fn keyexp_256_2(prev0: AesBlock, prev1: AesBlock) -> AesBlock {
 
 pub(super) fn keygen_128(key: [u8; 16]) -> [AesBlock; 11] {
     let key0 = key.into();
-    let key1 = keyexp_128::<0x01000000>(key0);
-    let key2 = keyexp_128::<0x02000000>(key1);
-    let key3 = keyexp_128::<0x04000000>(key2);
-    let key4 = keyexp_128::<0x08000000>(key3);
-    let key5 = keyexp_128::<0x10000000>(key4);
-    let key6 = keyexp_128::<0x20000000>(key5);
-    let key7 = keyexp_128::<0x40000000>(key6);
-    let key8 = keyexp_128::<0x80000000>(key7);
-    let key9 = keyexp_128::<0x1b000000>(key8);
-    let key10 = keyexp_128::<0x36000000>(key9);
+    let key1 = keyexp_128(key0, 0x01000000);
+    let key2 = keyexp_128(key1, 0x02000000);
+    let key3 = keyexp_128(key2, 0x04000000);
+    let key4 = keyexp_128(key3, 0x08000000);
+    let key5 = keyexp_128(key4, 0x10000000);
+    let key6 = keyexp_128(key5, 0x20000000);
+    let key7 = keyexp_128(key6, 0x40000000);
+    let key8 = keyexp_128(key7, 0x80000000);
+    let key9 = keyexp_128(key8, 0x1b000000);
+    let key10 = keyexp_128(key9, 0x36000000);
 
     [
         key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10,
@@ -288,25 +288,25 @@ pub(super) fn keygen_192(key: [u8; 24]) -> [AesBlock; 13] {
         load_u32_be(&key, 20),
     ];
     let key0 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192::<0x01000000>(k);
+    let p = keyexp_192(k, 0x01000000);
     let key1 = AesBlock(k[4], k[5], p[0], p[1]);
     let key2 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192::<0x02000000>(p);
+    let k = keyexp_192(p, 0x02000000);
     let key3 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192::<0x04000000>(k);
+    let p = keyexp_192(k, 0x04000000);
     let key4 = AesBlock(k[4], k[5], p[0], p[1]);
     let key5 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192::<0x08000000>(p);
+    let k = keyexp_192(p, 0x08000000);
     let key6 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192::<0x10000000>(k);
+    let p = keyexp_192(k, 0x10000000);
     let key7 = AesBlock(k[4], k[5], p[0], p[1]);
     let key8 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192::<0x20000000>(p);
+    let k = keyexp_192(p, 0x20000000);
     let key9 = AesBlock(k[0], k[1], k[2], k[3]);
-    let p = keyexp_192::<0x40000000>(k);
+    let p = keyexp_192(k, 0x40000000);
     let key10 = AesBlock(k[4], k[5], p[0], p[1]);
     let key11 = AesBlock(p[2], p[3], p[4], p[5]);
-    let k = keyexp_192::<0x80000000>(p);
+    let k = keyexp_192(p, 0x80000000);
     let key12 = AesBlock(k[0], k[1], k[2], k[3]);
 
     [
@@ -318,19 +318,19 @@ pub(super) fn keygen_256(key: [u8; 32]) -> [AesBlock; 15] {
     let key0 = AesBlock::from(array_from_slice(&key, 0));
     let key1 = AesBlock::from(array_from_slice(&key, 16));
 
-    let key2 = keyexp_256_1::<0x01000000>(key0, key1);
+    let key2 = keyexp_256_1(key0, key1, 0x01000000);
     let key3 = keyexp_256_2(key1, key2);
-    let key4 = keyexp_256_1::<0x02000000>(key2, key3);
+    let key4 = keyexp_256_1(key2, key3, 0x02000000);
     let key5 = keyexp_256_2(key3, key4);
-    let key6 = keyexp_256_1::<0x04000000>(key4, key5);
+    let key6 = keyexp_256_1(key4, key5, 0x04000000);
     let key7 = keyexp_256_2(key5, key6);
-    let key8 = keyexp_256_1::<0x08000000>(key6, key7);
+    let key8 = keyexp_256_1(key6, key7, 0x08000000);
     let key9 = keyexp_256_2(key7, key8);
-    let key10 = keyexp_256_1::<0x10000000>(key8, key9);
+    let key10 = keyexp_256_1(key8, key9, 0x10000000);
     let key11 = keyexp_256_2(key9, key10);
-    let key12 = keyexp_256_1::<0x20000000>(key10, key11);
+    let key12 = keyexp_256_1(key10, key11, 0x20000000);
     let key13 = keyexp_256_2(key11, key12);
-    let key14 = keyexp_256_1::<0x40000000>(key12, key13);
+    let key14 = keyexp_256_1(key12, key13, 0x40000000);
 
     [
         key0, key1, key2, key3, key4, key5, key6, key7, key8, key9, key10, key11, key12, key13,

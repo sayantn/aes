@@ -86,12 +86,14 @@ cfg_if! {
         macro_rules! impl_aese_aesd {
             ($($name:ident),*) => {$(
                 impl $name {
+                    #[inline(always)]
                     fn aese(self, round_key: Self) -> Self {
                         let (a, b) = self.into();
                         let (rk_a, rk_b) = round_key.into();
                         (a.aese(rk_a), b.aese(rk_b)).into()
                     }
 
+                    #[inline(always)]
                     fn aesd(self, round_key: Self) -> Self {
                         let (a, b) = self.into();
                         let (rk_a, rk_b) = round_key.into();
@@ -110,6 +112,7 @@ cfg_if! {
                     ///
                     /// # Panics
                     /// If `keys.len() == 0`
+                    #[inline]
                     pub fn chain_enc(self, keys: &[$name]) -> $name {
                         assert_ne!(keys.len(), 0);
 
@@ -124,6 +127,7 @@ cfg_if! {
                     ///
                     /// # Panics
                     /// If `keys.len() == 0`
+                    #[inline]
                     pub fn chain_dec(self, keys: &[$name]) -> $name {
                         assert_ne!(keys.len(), 0);
 
@@ -138,6 +142,7 @@ cfg_if! {
                     ///
                     /// # Panics
                     /// If `keys.len() < 2`
+                    #[inline]
                     pub fn chain_enc_with_last(self, keys: &[$name]) -> $name {
                         assert!(keys.len() >= 2);
 
@@ -152,6 +157,7 @@ cfg_if! {
                     ///
                     /// # Panics
                     /// If `keys.len() < 2`
+                    #[inline]
                     pub fn chain_dec_with_last(self, keys: &[$name]) -> $name {
                         assert!(keys.len() >= 2);
 
