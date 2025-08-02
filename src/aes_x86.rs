@@ -11,6 +11,13 @@ use core::ops::{BitAnd, BitOr, BitXor, Not};
 #[must_use]
 pub struct AesBlock(pub(super) __m128i);
 
+impl PartialEq for AesBlock {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe { _mm_movemask_epi8(_mm_cmpeq_epi8(self.0, other.0)) == 0xffff }
+    }
+}
+
 impl BitAnd for AesBlock {
     type Output = Self;
 
@@ -63,7 +70,7 @@ impl AesBlock {
     #[inline]
     #[must_use]
     pub fn is_zero(self) -> bool {
-        unsafe { _mm_testz_si128(self.0, self.0) == 1 }
+        self == Self::zero()
     }
 
     /// Performs one round of AES encryption function (`ShiftRows`->`SubBytes`->`MixColumns`->`AddRoundKey`)
@@ -127,7 +134,7 @@ impl AesBlock {
 // The key expansion code is taken from the Intel whitepaper
 
 fn keyexp_128<const RCON: i32>(prev_rkey: AesBlock) -> AesBlock {
-    prev_rkey.mix() ^ prev_rkey.keygenassist::<RCON>().shuffle::<0xff>()
+    keyexp_256_1::<RCON>(prev_rkey, prev_rkey)
 }
 
 fn keyexp_192<const RCON1: i32, const RCON2: i32>(
@@ -142,8 +149,18 @@ fn keyexp_192<const RCON1: i32, const RCON2: i32>(
 
     fwd::<RCON1>(state1, state2);
 
-    let key1 = unsafe { _mm_unpacklo_epi64(prev_state, state1.0) };
-    let key2 = unsafe { _mm_alignr_epi8::<8>(state2.0, state1.0) };
+    let key1 = unsafe {
+        _mm_castpd_si128(_mm_shuffle_pd::<0>(
+            _mm_castsi128_pd(prev_state),
+            _mm_castsi128_pd(state1.0),
+        ))
+    };
+    let key2 = unsafe {
+        _mm_castpd_si128(_mm_shuffle_pd::<1>(
+            _mm_castsi128_pd(state1.0),
+            _mm_castsi128_pd(state2.0),
+        ))
+    };
 
     fwd::<RCON2>(state1, state2);
 

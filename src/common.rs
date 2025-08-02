@@ -26,15 +26,33 @@ impl From<AesBlock> for u128 {
     }
 }
 
+#[cfg(not(all(
+    any(target_arch = "x86", target_arch = "x86_64"),
+    target_feature = "aes"
+)))]
+impl PartialEq for AesBlock {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        (*self ^ *other).is_zero()
+    }
+}
+
+impl PartialEq for AesBlockX2 {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        (*self ^ *other).is_zero()
+    }
+}
+
+impl PartialEq for AesBlockX4 {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        (*self ^ *other).is_zero()
+    }
+}
+
 macro_rules! impl_common_ops {
     ($($name:ty, $key_len:literal),*) => {$(
-        impl PartialEq for $name {
-            #[inline]
-            fn eq(&self, other: &Self) -> bool {
-                (*self ^ *other).is_zero()
-            }
-        }
-
         impl Eq for $name {}
 
         impl $name {

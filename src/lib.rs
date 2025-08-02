@@ -56,7 +56,6 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(all(
         any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse4.1",
         target_feature = "aes",
     ))] {
         #[path = "aes_x86.rs"]

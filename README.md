@@ -16,7 +16,7 @@ In case you discover a bug, please feel free to file an issue at [my repository]
 
 | Implementation                 | Architecture          | Target Feature  |                                                                                        |
 | ------------------------------ | --------------------- | --------------- | -------------------------------------------------------------------------------------- |
-| **AES-NI**                     | `x86`/`x86_64`        | `sse4.1`+`aes`  |                                                                                        |
+| **AES-NI**                     | `x86`/`x86_64`        | `aes`  |                                                                                        |
 | **AES-Neon**                   | `aarch64`/`arm64ec`   | `aes`           |                                                                                        |
 |                                | `arm`                 | `v8`+`aes`      | *Nightly-only*                                                                         |
 | **AES-RV**                     | `riscv32`/`riscv64`   | `zkne`+`zknd`   | *Nightly-only*                                                                         |
