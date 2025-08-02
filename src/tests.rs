@@ -238,3 +238,67 @@ fn aes_256_test() {
 
     aes_test!(dec: dec, AES_256_VECTORS);
 }
+
+#[test]
+fn aes_128_x2_test() {
+    let key0 = <[u8; 16]>::from_hex("0123456789abcdeffedcba9876543210").unwrap();
+    let key1 = <[u8; 16]>::from_hex("000102030405060708090a0b0c0d0e0f").unwrap();
+
+    let block0 = AES_128_VECTORS[0].0;
+    let block1 = AES_128_VECTORS[1].0;
+
+    assert_eq!(
+        Aes128EncX2::from([key0, key1]).encrypt_2_blocks((block0, block1).into()),
+        (
+            Aes128Enc::from(key0).encrypt_block(block0),
+            Aes128Enc::from(key1).encrypt_block(block1)
+        )
+            .into()
+    );
+
+    assert_eq!(
+        Aes128DecX2::from([key0, key1]).decrypt_2_blocks((block0, block1).into()),
+        (
+            Aes128Dec::from(key0).decrypt_block(block0),
+            Aes128Dec::from(key1).decrypt_block(block1)
+        )
+            .into()
+    );
+}
+
+#[test]
+fn aes_128_x4_test() {
+    let key0 = <[u8; 16]>::from_hex("0123456789abcdeffedcba9876543210").unwrap();
+    let key1 = <[u8; 16]>::from_hex("000102030405060708090a0b0c0d0e0f").unwrap();
+    let key2 = <[u8; 16]>::from_hex("0f0e0d0c0b0a09080706050403020100").unwrap();
+    let key3 = <[u8; 16]>::from_hex("00102030405060708090a0b0c0d0e0f0").unwrap();
+
+    let block0 = AES_128_VECTORS[0].0;
+    let block1 = AES_128_VECTORS[1].0;
+    let block2 = AES_128_VECTORS[2].0;
+    let block3 = AES_128_VECTORS[3].0;
+
+    assert_eq!(
+        Aes128EncX4::from([key0, key1, key2, key3])
+            .encrypt_4_blocks((block0, block1, block2, block3).into()),
+        (
+            Aes128Enc::from(key0).encrypt_block(block0),
+            Aes128Enc::from(key1).encrypt_block(block1),
+            Aes128Enc::from(key2).encrypt_block(block2),
+            Aes128Enc::from(key3).encrypt_block(block3)
+        )
+            .into()
+    );
+
+    assert_eq!(
+        Aes128DecX4::from([key0, key1, key2, key3])
+            .decrypt_4_blocks((block0, block1, block2, block3).into()),
+        (
+            Aes128Dec::from(key0).decrypt_block(block0),
+            Aes128Dec::from(key1).decrypt_block(block1),
+            Aes128Dec::from(key2).decrypt_block(block2),
+            Aes128Dec::from(key3).decrypt_block(block3)
+        )
+            .into()
+    );
+}
