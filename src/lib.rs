@@ -3,14 +3,6 @@
 #![cfg_attr(
     all(
         feature = "nightly",
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "vaes"
-    ),
-    feature(stdarch_x86_avx512)
-)]
-#![cfg_attr(
-    all(
-        feature = "nightly",
         target_arch = "arm",
         target_feature = "v8",
         target_feature = "aes",
@@ -50,7 +42,6 @@
     clippy::doc_markdown,
     clippy::wildcard_imports
 )]
-
 use cfg_if::cfg_if;
 
 cfg_if! {
