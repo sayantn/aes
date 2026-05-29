@@ -16,7 +16,7 @@ In case you discover a bug, please feel free to file an issue at [my repository]
 
 | Implementation                 | Architecture          | Target Feature  |                                                                                        |
 | ------------------------------ | --------------------- | --------------- | -------------------------------------------------------------------------------------- |
-| **AES-NI**                     | `x86`/`x86_64`        | `aes`  |                                                                                        |
+| **AES-NI**                     | `x86`/`x86_64`        | `aes`           |                                                                                        |
 | **AES-Neon**                   | `aarch64`/`arm64ec`   | `aes`           |                                                                                        |
 |                                | `arm`                 | `v8`+`aes`      | *Nightly-only*                                                                         |
 | **AES-RV**                     | `riscv32`/`riscv64`   | `zkne`+`zknd`   | *Nightly-only*                                                                         |
@@ -31,20 +31,20 @@ This will *only* be used if no accelerated AES implementation is found, **and** 
 
 ## For X2 Vector AES (2 blocks in parallel)
 
-| Implementation | Architecture   | Target Feature |                |
-| -------------- | -------------- | -------------- | -------------- |
-| **AES-NI**     | `x86`/`x86_64` | `vaes`         | *Nightly-only* |
+| Implementation | Architecture   | Target Feature |
+| -------------- | -------------- | -------------- |
+| **AES-NI**     | `x86`/`x86_64` | `vaes`         |
 
 ## For X4 Vector AES (4 blocks in parallel)
 
-| Implementation | Architecture   | Target Feature   |                |
-| -------------- | -------------- | ---------------- | -------------- |
-| **AES-NI**     | `x86`/`x86_64` | `vaes`+`avx512f` | *Nightly-only* |
+| Implementation | Architecture   | Target Feature   |
+| -------------- | -------------- | ---------------- |
+| **AES-NI**     | `x86`/`x86_64` | `vaes`+`avx512f` |
 
 For Vector AES, if no accelerated version is found, then a *tuple-based* implementation is used.
 That is, if an `x86_64` machine has `vaes`, but not `avx512f`, then `AesBlockX4` will be represented as a wrapper over `(AesBlockX2, AesBlockX2)` (which still benefits from the X2 parallelism offered by `vaes`).
 
-If you are unsure, use `target_cpu=native` (if not cross-compiling; otherwise you can use `target_cpu=<CPU of your target machine>` with the appropriate target triple) in
+If you are unsure, use `target_cpu=native` (if not cross-compiling; otherwise you can use `target_cpu=<CPU of your target machine>` with the appropriate target triple) in/
 the `RUSTFLAGS` environment variable, and use the `nightly` feature **only** if you are using a nightly compiler.
 
 # Minimum Supported Rust version

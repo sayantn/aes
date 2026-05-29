@@ -1,5 +1,4 @@
 use crate::*;
-use cfg_if::cfg_if;
 use core::array;
 use core::fmt::Debug;
 
@@ -95,12 +94,12 @@ pub trait AesDecryptX4<const KEY_LEN: usize>:
     fn decrypt_4_blocks(&self, ciphertext: AesBlockX4) -> AesBlockX4;
 }
 
-cfg_if! {
-    if #[cfg(all(
+cfg_select! {
+    all(
         feature = "nightly",
         any(target_arch = "powerpc", target_arch = "powerpc64"),
         target_feature = "power8-crypto"
-    ))] {
+    ) => {
         #[inline(always)]
         fn dec_round_keys<const N: usize>(enc_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
             *enc_round_keys
@@ -110,7 +109,8 @@ cfg_if! {
         fn enc_round_keys<const N: usize>(dec_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
             *dec_round_keys
         }
-    } else {
+    }
+    _ => {
         #[inline(always)]
         fn dec_round_keys<const N: usize>(enc_round_keys: &[AesBlock; N]) -> [AesBlock; N] {
             let mut drk = [AesBlock::zero(); N];
@@ -135,15 +135,15 @@ cfg_if! {
     }
 }
 
-cfg_if! {
-    if #[cfg(all(
-            any(
-                target_arch = "aarch64",
-                target_arch = "arm64ec",
-                all(feature = "nightly", target_arch = "arm", target_feature = "v8")
-            ),
-            target_feature = "aes",
-        ))] {
+cfg_select! {
+    all(
+        any(
+            target_arch = "aarch64",
+            target_arch = "arm64ec",
+            all(feature = "nightly", target_arch = "arm", target_feature = "v8")
+        ),
+        target_feature = "aes",
+    ) => {
         macro_rules! impl_aese_aesd {
             ($($name:ident),*) => {$(
                 impl $name {
@@ -231,7 +231,8 @@ cfg_if! {
                 }
             )*};
         }
-    } else {
+    }
+    _ => {
         macro_rules! declare_chain {
             ($($name:ty),*) => {$(
                 impl $name {
@@ -367,12 +368,12 @@ macro_rules! implement_aes {
                 }
             }
 
-            cfg_if! {
-                if #[cfg(all(
+            cfg_select! {
+                all(
                     feature = "nightly",
                     any(target_arch = "powerpc", target_arch = "powerpc64"),
                     target_feature = "power8-crypto"
-                ))] {
+                ) => {
                     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
                         let mut acc = ciphertext ^ self.round_keys[$nr];
                         for &drk in self.round_keys[1..$nr].iter().rev() {
@@ -390,7 +391,8 @@ macro_rules! implement_aes {
                         let (a, b) = ciphertext.into();
                         (self.decrypt_2_blocks(a), self.decrypt_2_blocks(b)).into()
                     }
-                } else {
+                }
+                _ => {
                     fn decrypt_block(&self, ciphertext: AesBlock) -> AesBlock {
                         ciphertext.chain_dec_with_last(&self.round_keys)
                     }
@@ -414,13 +416,13 @@ implement_aes!(Aes128Enc, Aes128Dec, 16, 10, keygen_128);
 implement_aes!(Aes192Enc, Aes192Dec, 24, 12, keygen_192);
 implement_aes!(Aes256Enc, Aes256Dec, 32, 14, keygen_256);
 
-cfg_if! {
+cfg_select! {
     // Only interleave the keys if we have a decent enough X2 implementation
-    if #[cfg(all(
+    all(
         feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "vaes"
-    ))] {
+    ) => {
 
         #[inline(always)]
         fn dec_round_keys_x2<const N: usize>(enc_round_keys: &[AesBlockX2; N]) -> [AesBlockX2; N] {
@@ -520,7 +522,8 @@ cfg_if! {
         implement_aes_x2!(Aes128EncX2, Aes128DecX2, 16, 10, keygen_128);
         implement_aes_x2!(Aes192EncX2, Aes192DecX2, 24, 12, keygen_192);
         implement_aes_x2!(Aes256EncX2, Aes256DecX2, 32, 14, keygen_256);
-    } else {
+    }
+    _ => {
         // otherwise just use a tuple
 
         macro_rules! implement_aes_x2 {
@@ -606,14 +609,14 @@ cfg_if! {
     }
 }
 
-cfg_if! {
+cfg_select! {
     // Only interleave the keys if we have a decent enough X4 implementation
-    if #[cfg(all(
+    all(
         feature = "nightly",
         any(target_arch = "x86", target_arch = "x86_64"),
         target_feature = "vaes",
         target_feature = "avx512f"
-    ))] {
+     ) => {
 
         #[inline(always)]
         fn dec_round_keys_x4<const N: usize>(enc_round_keys: &[AesBlockX4; N]) -> [AesBlockX4; N] {
@@ -703,7 +706,8 @@ cfg_if! {
         implement_aes_x4!(Aes128EncX4, Aes128DecX4, 16, 10, keygen_128);
         implement_aes_x4!(Aes192EncX4, Aes192DecX4, 24, 12, keygen_192);
         implement_aes_x4!(Aes256EncX4, Aes256DecX4, 32, 14, keygen_256);
-    } else {
+    }
+    _ => {
         // otherwise just use a tuple
 
         macro_rules! implement_aes_x4 {

@@ -6,16 +6,9 @@ version = 4
 name = "aes_crypto"
 version = "1.4.0"
 dependencies = [
- "cfg-if",
  "hex",
  "lazy_static",
 ]
-
-[[package]]
-name = "cfg-if"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 
 [[package]]
 name = "hex"
